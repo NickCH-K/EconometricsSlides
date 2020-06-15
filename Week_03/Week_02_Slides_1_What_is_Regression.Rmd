@@ -1,0 +1,497 @@
+---
+title: "Ordinary Least Squares"
+subtitle: "Part 1: What it Is"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, dev.args = list(png = list(type = "cairo")), warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(gghighlight)
+library(jtools)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# What is Regression?
+
+- In statistics, regression is the practice of *line-fitting*
+- We want to *use one variable to predict another*
+- Let's say using $X$ to predict $Y$
+- We'd refer to $X$ as the "independent variable", and $Y$ as the "dependent variable" (dependent on $X$ that is)
+- Regression is the idea that we should characterize the relationship between $X$ and $Y$ as a *line*, and use that line to predict $Y$
+
+---
+
+# $X$ and $Y$
+
+- Here we have $X$ and $Y$
+
+```{r, echo = FALSE}
+set.seed(2000)
+tb <- tibble(X = rnorm(100) + 3) %>%
+  mutate(Y = 3*X + rnorm(100))
+
+ggplot(tb, aes(x = X, y = Y)) + 
+  geom_point() + 
+  theme_metro()
+```
+
+
+---
+
+# $X$ and $Y$
+
+- I have an $X$ value of 2.5 and want to predict what $Y$ will be. What can I do?
+
+```{r, echo = FALSE}
+ggplot(tb, aes(x = X, y = Y)) + 
+  geom_point() + 
+  theme_metro() + 
+  geom_vline(aes(xintercept = 2.5), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 2.5, y = 13, label = 'X = 2.5', hjust = 0, fill = 'white', size = 16/.pt)
+```
+
+---
+
+# $X$ and $Y$
+
+- I can't just say "just predict whatever values of $Y$ we see for $X = 2.5$, because there are multiple of those!
+- Plus, what if we want to predict for a value we DON'T have any actual observations of, like $X = 4.3$?
+
+```{r, echo = FALSE}
+ggplot(tb, aes(x = X, y = Y)) + 
+  geom_point() + 
+  theme_metro() + 
+  geom_vline(aes(xintercept = 2.5), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 2.5, y = 16, label = 'X = 2.5', hjust = 0, size = 16/.pt, fill = 'white') + 
+  geom_vline(aes(xintercept = 4.3), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 4.3, y = 16, label = 'X = 4.3', hjust = 0, size = 16/.pt, fill = 'white') + 
+  gghighlight(abs(X - 2.5) < .03)
+```
+
+---
+
+# Data is Granular
+
+- If I try to fit *every point*, I'll get a mess that won't really tell me the relationship between $X$ and $Y$
+- So, we *simplify* the relationship into a *shape*: a line! The line smooths out those three points around 2.5 and fills in that gap around 4.3
+
+```{r, echo = FALSE}
+ggplot(tb, aes(x = X, y = Y)) + 
+  geom_point() + 
+  theme_metro() + 
+  geom_vline(aes(xintercept = 2.5), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 2.5, y = 16, label = 'X = 2.5', hjust = 0, size = 16/.pt, fill = 'white') + 
+  geom_vline(aes(xintercept = 4.3), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 4.3, y = 16, label = 'X = 4.3', hjust = 0, size = 16/.pt, fill = 'white') + 
+  geom_smooth(method='lm',se=FALSE)
+```
+
+---
+
+# Isn't This Worse?
+
+- By adding a line, we are necessarily *simplifying* our presentation of the data. We're tossing out information!
+- Our prediction of the *data we have* will be less accurate than if we just make predictions point-by-point
+- However, we'll do a better job predicting *other* data (avoiding "overfitting")
+- And, since a *shape* is something we can interpret, as opposed to a long list of predictions, which we can't really, the line will do a better job of telling us about the *true underlying relationship*
+
+---
+
+# The Line Does a Few Things:
+
+- We can get a *prediction* of $Y$ for a given value of $X$ (If we follow $X = 2.5$ up to our line we get $Y = 7.6$)
+- We see the *relationship*: the line slopes up, telling us that "more $X$ means more $Y$ too!"
+
+```{r, echo = FALSE}
+ggplot(tb, aes(x = X, y = Y)) + 
+  geom_point() + 
+  theme_metro() + 
+  geom_segment(aes(x=2.5, xend = 2.5, y = 0, yend = 7.5526), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 2.5, y = 3, label = 'X = 2.5', hjust = 0, size = 16/.pt, fill = 'white') + 
+  geom_segment(aes(x= 4.3, xend = 4.3, y = 0, yend = 12.82084), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 4.3, y = 5, label = 'X = 4.3', hjust = 0, size = 16/.pt, fill = 'white') + 
+  geom_smooth(method='lm',se=FALSE) + 
+  geom_segment(aes(x = 0, xend = 2.5, y = 7.5526, yend = 7.5526), linetype = 'dashed', color = 'red') + 
+  annotate(geom = 'label', x = .5, y = 7.5526, label = 'Y = 7.6', vjust = 1, size = 16/.pt, fill = 'white') + 
+  geom_segment(aes(x = 0, xend = 4.3, y = 12.82084, yend = 12.82084), linetype = 'dashed', color = 'red') + 
+  annotate(geom = 'label', x = .5, y = 12.82084, label = 'Y = 12.8', vjust = 1, size = 16/.pt, fill = 'white')
+```
+
+
+---
+
+# Lines
+
+- That line we get is the *fit* of our model
+- A model "fit" means we've taken a *shape* (our line) and picked the one that best fits our data
+- All forms of regression do this
+- Ordinary least squares specifically uses a *straight line* as its shape
+- The resulting line we get can also be written out as an actual line, i.e.
+
+$$ Y = intercept + slope*X $$
+
+---
+
+# Lines
+
+- We can use that line as... a line!
+- If we plug in a value of $X$, we get a prediction for $Y$
+- Because these $Y$ values are predictions, we'll give them a hat $\hat{Y}$
+
+$$ Y = 3 + 4*X $$
+
+$$ \hat{Y} = 3 + 4*(3.2) $$
+
+$$ \hat{Y} = 15.8 $$
+
+---
+
+# Lines
+
+- We can also use it to explain the relationship
+- Whatever the intercept is, that's what we predict for $Y$ when $X = 0$
+
+$$ Y = 3 + 4*X $$
+
+$$ \hat{Y} = 3 + 4*0 $$
+
+$$ \hat{Y} = 3 $$
+
+---
+
+# Lines
+
+- And as $X$ increases, we know how much we expect $Y$ to increase because of the slope
+
+$$ Y = 3 + 4*X $$
+
+$$ \hat{Y} = 3 + 4*3 = 15 $$
+
+$$ \hat{Y} = 3 + 4*4 = 19 $$
+
+- When $X$ increases by $1$, $Y$ increases by the slope (which is $4$ here)
+
+---
+
+# Ordinary Least Squares
+
+SO!
+
+- Regression fits a *shape* to the data
+- Ordinary least squares specifically fits a *straight line* to the data
+- The straight line is described using an $intercept$ and a $slope$
+- When we plug an $X$ into the line, we get a prediction for $Y$, which we call $\hat{Y}$
+- When $X = 0$, we predict $\hat{Y} = intercept$
+- When $X$ increases by $1$, our prediction of $Y$ increases by the $slope$
+- If $slope > 0$, $X$ and $Y$ are positively related/correlated
+- If $slope < 0$, $X$ and $Y$ are negatively related/correlated
+
+---
+
+# Concept Checks
+
+- How does producing a *line* let us use $X$ to predict $Y$? 
+- If our line is $Y = 5 - 2*X$, explain what the $-2$ means in a sentence
+- Not all of the points are exactly on the line, meaning some of our predictions will be wrong! Should we be concerned? Why or why not?
+
+---
+
+# How?
+
+- We know that regression fits a line
+- But how does it do that exactly?
+- It picks the line that produces the *smallest squares*
+- Thus, "ordinary least squares"
+- Wait, huh?
+
+---
+
+# Predictions and Residuals
+
+- Whenever you make a prediction of any kind, you rarely get it *exactly right*
+- The difference between your prediction and the actual data is the *residual*
+
+$$ Y = 3 + 4*X $$
+
+If we have a data point where $X = 4$ and $Y = 18$, then
+
+$$ \hat{Y} = 3 + 4*4 = 19 $$
+
+Then the *residual* is $Y - \hat{Y} = 18 - 19 = -1$.
+
+---
+
+# Predictions and Residuals
+
+So really, our relationship doesn't look like this...
+
+$$ Y = intercept + slope*X $$
+
+Instead, it's...
+
+$$ Y = intercept + slope*X + residual $$
+
+We still use $intercept + slope*X$ to predict $Y$ though, so this is also
+
+$$ Y = \hat{Y} + residual $$
+
+---
+
+# Ordinary Least Squares
+
+- As you'd guess, a good prediction should make the residuals as small as possible
+- We want to pick a line to do that
+- And in particular, we're going to *square* those residuals, so the really-big residuals count even more. We really don't want to have points that are super far away from the line!
+- Then, we pick a line to minimize those squared residuals ("least squares")
+
+---
+
+# Ordinary Least Squares
+
+- Start with our data
+
+```{r}
+tb2 <- tibble(X = c(1,3,5,6.5), Y = c(2,6, 3.6, 8)) %>%
+  mutate(line1 = 1.5 + X,
+         line2 = 2 + .6*X,
+         line3 = 1.7324 + .8175*X)
+ggplot(tb2, aes(x = X, y = Y)) + 
+  geom_point(size = 4) + 
+  expand_limits(x = c(0,7), y = c(1,9))+
+  theme_metro() + 
+  coord_fixed()
+```
+
+---
+
+# Ordinary Least Squares
+
+- Let's just pick a line at random, not necessarily from OLS
+
+```{r}
+ggplot(tb2, aes(x = X, y = Y)) + 
+  geom_point(size = 4) + 
+  expand_limits(x = c(0,7), y = c(1,9))+
+  theme_metro() + 
+  coord_fixed() + 
+  geom_line(aes(x = X, y = line1), color = 'blue', size = 1.5)
+```
+
+---
+
+
+# Ordinary Least Squares
+
+- The vertical distance from point to line is the residual
+
+```{r}
+ggplot(tb2, aes(x = X, y = Y)) + 
+  geom_point(size = 4) + 
+  expand_limits(x = c(0,7), y = c(1,9))+
+  theme_metro() + 
+  coord_fixed() + 
+  geom_segment(aes(x = X, xend = X, y = Y, yend = line1), size = 1.5) + 
+  geom_line(aes(x = X, y = line1), color = 'blue', size = 1.5)
+```
+
+---
+
+# Ordinary Least Squares
+
+- Now square those residuals
+
+```{r}
+ggplot(tb2, aes(x = X, y = Y)) + 
+  geom_point(size = 4) + 
+  expand_limits(x = c(0,7), y = c(1,9))+
+  theme_metro() + 
+  geom_rect(aes(xmin = X, xmax = X + abs(line1 - Y), ymin = Y, ymax = line1), alpha = .5, fill = 'gray') + 
+  geom_line(aes(x = X, y = line1), color = 'blue', size = 1.5) +
+  coord_fixed()
+```
+
+---
+
+# Ordinary Least Squares
+
+- Can we get the total area in the squares smaller with a different line?
+
+```{r}
+ggplot(tb2, aes(x = X, y = Y)) + 
+  geom_point(size = 4) + 
+  expand_limits(x = c(0,7), y = c(1,9))+
+  theme_metro() + 
+  geom_rect(aes(xmin = X, xmax = X + abs(line2 - Y), ymin = Y, ymax = line2), alpha = .5, fill = 'gray') + 
+  geom_line(aes(x = X, y = line2), color = 'blue', size = 1.5) +
+  coord_fixed()
+```
+
+---
+
+# Ordinary Least Squares
+
+- Ordinary Least Squares, I can promise you, gets it the smallest
+
+```{r}
+ggplot(tb2, aes(x = X, y = Y)) + 
+  geom_point(size = 4) + 
+  expand_limits(x = c(0,7), y = c(1,9))+
+  theme_metro() + 
+  geom_rect(aes(xmin = X, xmax = X + abs(line3 - Y), ymin = Y, ymax = line3), alpha = .5, fill = 'gray') + 
+  geom_line(aes(x = X, y = line3), color = 'blue', size = 1.5) +
+  coord_fixed()
+```
+
+--- 
+---
+
+# Ordinary Least Squares
+
+- How does it figure out which line makes the smallest squares?
+- There's a mathematical formula for that!
+- First, instead of thinking of $intercept$ and $slope$, we reframe the line as having *parameters* we can pick
+
+$$ Y = intercept + slope*X + residual $$
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+---
+
+# Terminology Sidenote
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+- In statistics and econometrics, Greek letters represent "the truth" - in *the true process by which the data is generated*, a one-unit increase in $X$ is related to a $\beta_1$ increase in $Y$
+- When we put a hat on anything, that is our *prediction* or *estimation* of that true thing. $\hat{Y}$ is our prediction of $Y$, and $\hat{\beta_1}$ is our estimate of what we think the true $\beta_1$ is
+- Note the switch from "residual" to $\varepsilon$ - residuals are what's actually left over from our prediction in the real data, but the *error* $\varepsilon$ is the *true* difference between our line and $Y$. Even if we get the correct line with $\beta_0$ and $\beta_1$, there are still points off the line! 
+
+---
+
+# Ordinary Least Squares
+
+- Now that we have our line in parametric terms, we can pick our *estimates* of $\beta_0$ and $\beta_1$ in order to make the squared residuals as small as possible
+- Pick $\hat{\beta_0}$ and $\hat{\beta_1}$ to minimize:
+
+$$ \sum_i (residual_i^2) $$
+
+$$ \sum_i ((Y_i - \hat{Y})^2) $$
+
+$$ \sum_i ((Y_i - \hat{\beta_0} - \hat{\beta_1}X_i)^2) $$
+
+Where the $_i$ refers to a particular observation. $\sum_i$ means "sum this up over all the observations"
+
+(Conveniently, you can pick $\hat{\beta_0}$ and $\hat{\beta_1}$ to minimize that expression with basic calculus)
+
+---
+
+# Let's Play
+
+- Take a look at this OLS simulator and play around with it: [https://econometricsbysimulation.shinyapps.io/OLS-App/](https://econometricsbysimulation.shinyapps.io/OLS-App/)
+- Click "Show Residuals" to turn that on
+- Try different data generating processes and standard deviations
+- What settings make the residuals small or large? Any guesses why?
+- What happens if you take the intercept out? What does that make our line do?
+- How close does the line come to the data generating process? Intercept and slope are in the second table below the graph under "Estimate"
+
+--- 
+---
+
+# Concept Checks
+
+- Why might we want to minimize squared residuals rather than just residuals?
+- What's the difference between a residual and an error?
+- If I have the below OLS-fitted line from a dataset of children:
+
+$$ Height (Inches) = 18 + 2*Age$$
+
+And we have the kids Darryl who is 10 years old and 40 inches tall, and Bijetri who is 9 years old and 37 inches tall, what are each of their: (a) predicted values, (b) residuals, and then what is the sum of their squared residuals?
+
+---
+
+# Ordinary Least Squares in R
+
+- Ordinary Least Squares is built in to R using the `lm` function
+- Let's run a regression on the `Orange` data set of tree age and circumference
+
+```{r, echo = TRUE}
+data(Orange)
+lm(circumference ~ age, data = Orange)
+```
+
+--- 
+---
+
+# Ordinary Least Squares in R
+
+- What's going on here?
+
+```{r, eval = FALSE}
+lm(circumference ~ age, data = Orange)
+```
+
+- `circumference ~ age` is a *formula* object. It says to take the `circumference` variable and treat that as our dependent variable $(Y)$. Have it vary (`~`) according to `age` (independent variable, $X$)
+- `data = Orange` tells it the data set to look for those variables in
+- The output shows the `(Intercept)` $(\hat{\beta}_0)$ as well as the slope $(\hat{\beta}_1)$ on `age` (why doesn't it just say `slope`? Because later we'll have more than one slope!)
+
+---
+
+# Ordinary Least Squares in R
+
+- There's lots more information we can get from our regression, but that will wait for later
+- For now, let's just make a nice graph of it using `effect_plot` in the **jtools** library (make sure it's installed first with `install.packages('jtools')`)
+
+```{r, echo = TRUE, eval = FALSE}
+library(jtools)
+my_regression <- lm(circumference ~ age, data = Orange)
+effect_plot(my_regression,
+            pred = age,
+            plot.points = TRUE)
+```
+
+- `effect_plot` need us to *save our regression object* to give it, then tell it what variable we want as our x-axis with `pred`, and if we want the raw data on there, we say `plot.points = TRUE`
+
+---
+
+# Ordinary Least Squares in R
+
+- The result:
+
+```{r, echo = FALSE, eval = TRUE}
+my_regression <- lm(circumference ~ age, data = Orange)
+effect_plot(my_regression,
+            pred = age,
+            plot.points = TRUE) + 
+  theme_metro_regtitle()
+```
+
+---
+
+# Practice
+
+- Let's work through the "Ordinary Least Squares Part 1" module in the econometrics **swirl** 

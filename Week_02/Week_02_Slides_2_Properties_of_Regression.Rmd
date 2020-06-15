@@ -1,0 +1,451 @@
+---
+title: "Ordinary Least Squares"
+subtitle: "Part 2: Variation"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(gganimate)
+library(ggdag)
+library(jtools)
+library(purrr)
+library(Cairo)
+library(magick)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1))
+}
+```
+
+# Recap
+
+- Regression is the practice of fitting a *shape* to data so as to explain the relationship more generally
+- Ordinary least squares fits a *straight line*
+- It picks the straight line that minimizes the *sum of squared residuals*
+- That line has an intercept $\beta_0$ (Our prediction $\hat{Y}$ when $X = 0$) and a slope $\beta_1$ (how much higher we predict $Y$ will be when we look at an $X$ one unit higher)
+- The *residual* is the difference between our prediction $\hat{Y} = \hat{\beta}_0 + \hat{\beta}_1X$ and the actual number $Y$
+
+$$ Y = \beta_0 + \beta_1 X + \varepsilon $$
+$$ \hat{Y} = \hat{\beta}_0 + \hat{\beta}_1X $$
+
+---
+
+# Error
+
+- We have an idea that there's this *true* relationship $Y = \beta_0 + \beta_1 X + \varepsilon$
+- We can also call that relationship the *data-generating process*: this equation actually explains where our $Y$ observations come from
+- What we are trying to do by estimating OLS is to get an estimate of $\beta_0$ that's as close to $\beta_0$ as possible
+- And an estimate of $\beta_1$ that's as close to $\beta_1$ as possible
+- The difference between our *estimate* $\hat{\beta}_1$ and the actual true $\beta_1$ is the *error*
+
+---
+
+# Error
+
+- There are two main source of error in our estimates
+- One is *sampling variation* which is random
+- The other is *bias* which is systematic
+
+---
+
+# Sampling Variation
+
+- The true relationship/data-generating process represents the *underlying process* whereby we see $X$ and $Y$ being related to each other. If, truly, $Y = \beta_0 + \beta_1X + \varepsilon$, then $X$ *causes* $Y$
+- However, we can't see all the data, we can only see a sample
+- The point of statistics generally is to generalize from that sample to figure out the underlying process
+- And, just by chance, the best-fit line is going to be different in each sample
+- The variation in $\hat{\beta}_0$ and $\hat{\beta}_1$ that occurs *purely because of that random sampling is sampling variation
+
+---
+
+# Sampling Variation
+
+- Let's make data so we can see just how much of a deal sampling variation is!
+- The true data-generating process is $Y = 3 + 2X$
+- This is the FULL data set. We estimate $\hat{\beta}_0 = 3.099$ and $\hat{\beta}_1 = 1.956$. Not too far from the truth!
+
+```{r, dev = 'CairoPNG'}
+set.seed(1234)
+tb <- tibble(X = runif(100)) %>%
+  mutate(group_num = floor((row_number()-1)/2)) %>%
+  mutate(Y = 3 + 2*X + rnorm(100)) 
+
+ggplot(tb, aes(x = X, y = Y)) + 
+  geom_point(size = 3) + 
+  theme_metro() + 
+  geom_smooth(method = 'lm', se = FALSE) 
+```
+
+---
+
+# Sampling Variation
+
+- Let's take a subsample only two points at a time. The best-fit line for them is pretty obvious!
+- If we do this a lot of times, how much do we vary?
+
+```{r}
+link <- crossing(group_num = 1:50, iter = 1:50)
+
+tb2 <- tb %>%
+  left_join(link) %>%
+  mutate(iter2 = iter) %>%
+  group_by(group_num, iter2) %>%
+  mutate(iter = case_when(row_number() == 2 ~ NA_integer_, TRUE ~ iter)) %>%
+  ungroup() %>%
+  select(-iter2) %>%
+  left_join(map(1:100, function(x) tb %>% transmute(Xall = X, Yall = Y, iter = x)) %>%
+              bind_rows()) %>%
+  filter(!is.na(group_num),!is.na(Xall),!is.na(Yall),!is.na(X),!is.na(Y))
+
+p <- ggplot(tb2) + 
+  geom_point(aes(x = Xall, y = Yall), alpha = .5, color = 'gray') + 
+  geom_smooth(aes(x = Xall, y = Yall), color = 'red', method = 'lm', se = FALSE) + 
+  geom_point(data = tb,aes(x = X, y = Y),size = 3) + 
+  geom_smooth(data = tb,aes(x = X, y = Y),method = 'lm', se = FALSE) + 
+  theme_metro() + 
+  labs(x = "X", y = "Y",
+       title = 'Sampling Variation in OLS with N = 2') + 
+  transition_states(group_num)
+animate(p, nframes = 100)
+```
+
+---
+
+# Sampling Variation
+
+- I took fifty two-observation subsamples here. How much did $\hat{\beta}_1$ vary?
+- A lot! Look at those HUGE left and right observations. And even closer to the center it varied a lot!
+
+```{r, dev = 'CairoPNG'}
+tbhist <- tb %>%
+  group_by(group_num) %>%
+  group_map(~ coef(lm(Y~X, data = .x))[2]) %>%
+  unlist() %>%
+  data.frame(index = 1:50)
+
+ggplot(tbhist, aes(x = .)) + 
+  geom_density() + 
+  theme_metro()+
+  labs(x = expression(hat(beta)[1]),y = 'Density')
+```
+
+---
+
+# Sampling Variation
+
+- As N goes up, the distribution gets a lot cleaner
+- And more of the weight gathers around the true value (assuming we're not biased - more on that later)
+- This graph is the same but uses subsamples of 100
+
+```{r, dev = 'CairoPNG'}
+bigsamp <- 1:500 %>%
+  map(function(x) tibble(X = runif(100)) %>%
+        mutate(Y = 3 + 2*X + rnorm(100)) %>%
+        lm(Y~X, data = .) %>%
+        coef() %>%
+        `[`(2)) %>%
+  unlist() %>%
+  data.frame()
+
+ggplot(bigsamp, aes(x = .)) + 
+  geom_density() + 
+  theme_metro_regtitle() + 
+  geom_vline(aes(xintercept = 2), linetype = 'dashed', color = 'red') + 
+  annotate(geom='label', x = 2, y = .5, label = 'True Value', size = 16/.pt) + 
+  labs(x = expression(hat(beta)[1]),y = 'Density')
+```
+
+---
+
+# Sampling Variation
+
+- Due to sampling variation, the OLS coefficients are *themselves random variables*
+- In particular, they follow a normal distribution (thanks, central limit theorem!)
+- Assuming bias is not an issue, the *mean* of that normal distribution is the true value $\beta_1$ (and $\beta_0$) (but whatever the mean is, we only have our *one* sample)
+- The *standard deviation of the sampling distribution* (the *standard error*) is based on quality of prediction, sample size, and variation in $X$
+- And as the sample gets really big, the variance of the distribution shrinks, making it more likely we get really close to the truth
+
+---
+
+# Sampling Variation
+
+- The distribution of an OLS coefficient is
+
+$$ \hat{\beta} \sim N(\beta, \hat{\sigma}/\sqrt{N\times var(X)}) $$
+
+That is, the mean of the $\hat{\beta}$ sampling distribution is the true $\beta$, and the standard deviation is the *standard deviation of the regression* divided by $N$ (the sample size) times the variance of $X$
+
+- $\hat{\sigma}$ is roughly the variance of the residuals: it's the sum of squared residuals divided by $N-k$, where $k$ is the number of variables in the regression (including the constant)
+
+---
+
+# Sampling Variation
+
+- What does that tell us? 
+
+$$ \hat{\beta} \sim N(\beta, \hat{\sigma}/\sqrt{N\times var(X)}) $$
+
+- The bigger the residuals are/worse the model is at explaining $Y$ $(\hat{\sigma})$, the noisier $\hat{\beta}$ is - we're explaining poorly so our $\hat{\beta}$ is based on noise more than signal
+- The more observations $(N)$, the less error there is in our estimate (more data to go on)
+- The more variation there is in $X$ $(var(X))$, the more precise our estimate - we can really see $X$ moving around a lot, so it's really easy to catch whether $Y$ tends to be moving with it
+
+---
+
+# Sampling Variation
+
+- Let's return to the OLS simulator: [https://econometricsbysimulation.shinyapps.io/OLS-App/](https://econometricsbysimulation.shinyapps.io/OLS-App/) 
+- This time look at the *standard error* in that second table under the graph. 
+- Move things around. How does it change? 
+- With smaller standard errors, can you pick different seeds to make the estimate be far from the truth?
+
+---
+--- 
+
+# Concept Checks
+
+- The standard error is the standard deviation of *what*?
+- On average, the OLS estimate gives us the true $\beta$. Why be concerned about sampling variation at all then?
+- Consider two different studies with similar sample size and predictive accuracy: one looks at the effect of the stock market, which takes wild swings up and down regularly, on political unrest. The other looks at the effect of governmental structure, which changes rarely, on political unrest. Which study will have a more precise estimate of its OLS slope?
+- Without referring to the standard error equation, *why* might we expect that study to have a more precise estimate?
+
+---
+
+# Bias and the Error Term
+
+- All of the nice stuff we've gotten so far makes some assumptions about our true model
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+- In particular, we've made some assumptions about the error term $\varepsilon$
+- So what is that error term exactly, and what are we assuming about it?
+
+---
+
+# The Error Term
+
+- The error term contains everything that isn't in our model
+- If $Y$ were a pure function of $X$, for example if $Y$ was "height in feet" and $X$ was "height in inches", we wouldn't have an error term, because a straight line fully describes the relationship perfectly with no variation
+- But in most cases, the line is a simplification - we're leaving other stuff out! That's in the error term
+
+---
+
+# The Error Term
+
+- Consider this data generating process:
+
+$$ ClassGrade = \beta_0 + \beta_1 StudyTime + \varepsilon $$
+
+- Surely StudyTime isn't the *only* thing that determines your ClassGrade
+- Everything else is in the error term!
+- ProfessorLeniency, InterestInSubject, Intelligence, and so on and so on...
+
+---
+
+# The Error Term
+
+- Isn't that really bad? We're leaving out a bunch of important stuff!
+- It depends on what your goal is
+- If you want to *predict $Y$ as accurately as possible* then we're probably going to do a bad job of it
+- But if our real interest is *figuring out the relationship between $X$ and $Y$, then it's fine to leave stuff out, as long as whatever's left in the error term obeys a few important assumptions
+- The latter goal - understanding relationships and estimating parameters accurately - is what econometrics is more concerned with
+- The former - predicting accurately - is more the domain of data scientists these days
+
+---
+
+# Error Term Assumptions
+
+- The most important assumption about the error term is that it is *unrelated to $X$*
+- If $X$ and $\varepsilon$ are correlated, $\hat{\beta}_1$ will be *biased* - its distribution no longer has the true $\beta_1$ as its mean
+- In these cases we can say " $X$ is **endogenous**" or "we have **omitted variable bias**"
+- No amount of additional sample size will fix that problem!
+- (what will fix the problem? We'll get to that one later)
+
+---
+
+# Endogeneity
+
+- Why will this bias $\hat{\beta}_1$?
+- Let's say the data generating process looks like the below diagram, but we estimate $ClassGrade = \beta_0 + \beta_1 StudyTime + \varepsilon$
+- Because InterestInSubject affects both ClassGrade and StudyTime, you'll see people with both high ClassGrade and high StudyTime, but not becuase StudyTime caused ClassGrade, rather because InterestInSubject caused both!
+
+```{r, dev = 'CairoPNG', fig.width = 6, fig.height = 4}
+dag <- dagify(ClassGrade ~ StudyTime + InterestInSubject,
+              StudyTime ~ InterestInSubject,
+              coords = list(x = c(ClassGrade = 3, StudyTime = 1, InterestInSubject = 2),
+                            y = c(ClassGrade = 1, StudyTime = 1, InterestInSubject = 2)))
+ggdag_classic(dag, size = 5) + 
+  expand_limits(x = c(1,2.5)) +
+  theme_dag_blank() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'))
+```
+
+---
+
+# Let's Check
+
+- Let's create some data where the true effect of StudyTime (hours) on ClassGrade (grade points) is .1
+
+```{r, echo = FALSE}
+set.seed(40)
+```
+
+```{r, echo = TRUE}
+tb <- tibble(InterestInSubject = runif(200)) %>%
+  # Since InterestInSubject is used to make StudyTime, we know they're related
+  mutate(StudyTime = 4*runif(200) + InterestInSubject) %>%
+  mutate(ClassGrade = .1*StudyTime + InterestInSubject)
+
+# InterestInSubject is not in the model, it's in the error!
+lm(ClassGrade ~ StudyTime, data = tb)
+```
+
+- Uh oh...
+
+---
+
+# Let's Check
+
+- Importantly, a single estimate being off isn't necessarily a concern. That could be sampling bias!
+- But if we do that exact same analysis 500 times and look at the sampling distribution?
+- That mean is nowhere near the truth! We're definitely biased by endogeneity
+
+```{r, dev = 'CairoPNG', echo = FALSE}
+set.seed(50)
+ests <- 1:500 %>%
+  map(function(x)
+    tibble(InterestInSubject = runif(200)) %>%
+      mutate(StudyTime = 4*runif(200) + InterestInSubject) %>%
+      mutate(ClassGrade = .1*StudyTime + InterestInSubject) %>%
+      lm(ClassGrade~StudyTime, data = .) %>%
+      coef() %>%
+      `[`(2)) %>%
+  unlist() %>%
+  data.frame()
+
+ggplot(ests, aes(x = .)) + 
+  geom_density() + 
+  labs(x = 'StudyTime Coefficient',
+       y = 'Density') + 
+  geom_vline(aes(xintercept = .1), linetype = 'dashed', color = 'red') + 
+  annotate(geom = 'label', x = .1, y = 10, label = 'True Value .1', hjust = 0) +
+  theme_metro_regtitle()
+```
+
+---
+
+# Omitted Variable Bias
+
+- We can intuitively think about whether omitted variable bias is likely to make our estimates too high or too low
+- The sign of the bias will be the sign of the relationship between the omitted variable and $X$, **times** the sign of the relationship between the omitted variable bias and $Y$
+- InterestInSubject is positively related to both StudyTime and ClassGrade, and $+\times+ = +$, so our estimates are positively biased / too high
+- More precisely we have that the mean of the $\hat{\beta}_1$ sampling distribution is
+
+$$\beta_1 + corr(X,\varepsilon)\frac{\sigma_\varepsilon}{\sigma_X}$$
+
+(notice that $\varepsilon$ has a positive effect on $Y$, which is where we get the "both signs multiplied together" thing)
+
+---
+
+# Less Serious Error Concerns
+
+- Omitted variable bias can, well, bias us, which is very bad
+- There are some other assumptions that can fail that may also pose a problem to us but less so
+- We've assumed so far not just that $\varepsilon$ is unrelated to $X$, but also that the *variance* of $\varepsilon$ is unrelated to $X$, and that the $\varepsilon$s are unrelated to each other
+- If these assumptions fail, our standard errors will be wrong, but we won't be biased, and also there are ways to fix the standard errors
+- We will cover these only briefly, they'll come back later
+
+---
+
+# Heteroskedasticity
+
+- If the variance of the error term is different for different values of $X$, then we have "heteroskedasticity"
+- Notice in the below graph how the spread of the points around the line (the variance of the error term) is bigger on the right than the left
+
+```{r, dev = 'CairoPNG'}
+set.seed(1022)
+tb <- tibble(X = runif(200)) %>%
+  mutate(Y = .75*X + rnorm(200,sd=2*X)) 
+tb %>%
+  ggplot(aes(x = X, y = Y)) + 
+  geom_point() +
+  geom_smooth(method = 'lm', se = FALSE) + 
+  theme_metro()
+```
+
+---
+
+# Heteroskedasticity
+
+- We can correct for this using *heteroskedasticity-robust standard errors* which sort of "squash down" the big variances and then re-estimate the standard errors
+- We can do this in `export_summs` in **jtools** with `robust = TRUE`
+
+```{r}
+library(jtools)
+reg <- lm(Y~X, data = tb)
+export_summs(reg, robust = TRUE)
+```
+
+---
+
+# Correlated Errors
+
+- If the error terms are *correlated with each other*, then our standard errors will also be wrong
+- How could this happen? For example, maybe you've surveyed a bunch of people in different towns - the error terms within a town might be *clustered*
+- Or maybe you have time series data. If a term in the error term is "sticky" or has "momentum" it will likely be a similar error term a few time periods in a row, beign correlated across time, or *autocorrelated*
+- Again, this doesn't bias $\hat{\beta}_1$ but it can affect standard errors!
+
+---
+
+# Clustered Errors
+
+- We'll leave autocorrelation to our time series segment
+- But for clustering we can just use *cluster-robust standard errors*. We just need to also give it the variable that we think the errors are clustered in
+
+```{r}
+data(Orange)
+treemodel <- lm(circumference~age, data = Orange)
+export_summs(treemodel, cluster = 'Tree')
+```
+
+---
+
+# Concept Checks
+
+- What's the difference between an error term and a residual?
+- If there are important variables predicting $Y$ in the error term, what needs to be true for $\hat{\beta}_1$ to still be unbiased?
+- Major external investments affect both a firm's free cash reserves (positively) and its profits (negatively). Cash reserves also affects profits. If we estimate $Profits = \beta_0 + \beta_1 CashReserves + \varepsilon$, will $\hat{\beta}_1$ be biased *too high* or *too low*?
+- Draw what the sampling distribution of $\hat{\beta}_1$ might look like, with a vertical line where the true $\beta_1$ is
+- Draw a graph with heteroskedastic data
+
+---
+
+# Practice
+
+- Let's work through the "Ordinary Least Squares Part 2" module in the econometrics **swirl** 

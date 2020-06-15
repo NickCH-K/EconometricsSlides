@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Ordinary Least Squares</title>
+    <meta charset="utf-8" />
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <link href="libs/remark-css/metropolis.css" rel="stylesheet" />
+    <link href="libs/remark-css/metropolis-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Ordinary Least Squares
+## Part 1: What it Is
+### Updated 2020-06-07
+
+---
+
+
+
+
+
+# What is Regression?
+
+- In statistics, regression is the practice of *line-fitting*
+- We want to *use one variable to predict another*
+- Let's say using `\(X\)` to predict `\(Y\)`
+- We'd refer to `\(X\)` as the "independent variable", and `\(Y\)` as the "dependent variable" (dependent on `\(X\)` that is)
+- Regression is the idea that we should characterize the relationship between `\(X\)` and `\(Y\)` as a *line*, and use that line to predict `\(Y\)`
+
+---
+
+# `\(X\)` and `\(Y\)`
+
+- Here we have `\(X\)` and `\(Y\)`
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-1-1.png)&lt;!-- --&gt;
+
+
+---
+
+# `\(X\)` and `\(Y\)`
+
+- I have an `\(X\)` value of 2.5 and want to predict what `\(Y\)` will be. What can I do?
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
+
+---
+
+# `\(X\)` and `\(Y\)`
+
+- I can't just say "just predict whatever values of `\(Y\)` we see for `\(X = 2.5\)`, because there are multiple of those!
+- Plus, what if we want to predict for a value we DON'T have any actual observations of, like `\(X = 4.3\)`?
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-3-1.png)&lt;!-- --&gt;
+
+---
+
+# Data is Granular
+
+- If I try to fit *every point*, I'll get a mess that won't really tell me the relationship between `\(X\)` and `\(Y\)`
+- So, we *simplify* the relationship into a *shape*: a line! The line smooths out those three points around 2.5 and fills in that gap around 4.3
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-4-1.png)&lt;!-- --&gt;
+
+---
+
+# Isn't This Worse?
+
+- By adding a line, we are necessarily *simplifying* our presentation of the data. We're tossing out information!
+- Our prediction of the *data we have* will be less accurate than if we just make predictions point-by-point
+- However, we'll do a better job predicting *other* data (avoiding "overfitting")
+- And, since a *shape* is something we can interpret, as opposed to a long list of predictions, which we can't really, the line will do a better job of telling us about the *true underlying relationship*
+
+---
+
+# The Line Does a Few Things:
+
+- We can get a *prediction* of `\(Y\)` for a given value of `\(X\)` (If we follow `\(X = 2.5\)` up to our line we get `\(Y = 7.6\)`)
+- We see the *relationship*: the line slopes up, telling us that "more `\(X\)` means more `\(Y\)` too!"
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-5-1.png)&lt;!-- --&gt;
+
+
+---
+
+# Lines
+
+- That line we get is the *fit* of our model
+- A model "fit" means we've taken a *shape* (our line) and picked the one that best fits our data
+- All forms of regression do this
+- Ordinary least squares specifically uses a *straight line* as its shape
+- The resulting line we get can also be written out as an actual line, i.e.
+
+$$ Y = intercept + slope*X $$
+
+---
+
+# Lines
+
+- We can use that line as... a line!
+- If we plug in a value of `\(X\)`, we get a prediction for `\(Y\)`
+- Because these `\(Y\)` values are predictions, we'll give them a hat `\(\hat{Y}\)`
+
+$$ Y = 3 + 4*X $$
+
+$$ \hat{Y} = 3 + 4*(3.2) $$
+
+$$ \hat{Y} = 15.8 $$
+
+---
+
+# Lines
+
+- We can also use it to explain the relationship
+- Whatever the intercept is, that's what we predict for `\(Y\)` when `\(X = 0\)`
+
+$$ Y = 3 + 4*X $$
+
+$$ \hat{Y} = 3 + 4*0 $$
+
+$$ \hat{Y} = 3 $$
+
+---
+
+# Lines
+
+- And as `\(X\)` increases, we know how much we expect `\(Y\)` to increase because of the slope
+
+$$ Y = 3 + 4*X $$
+
+$$ \hat{Y} = 3 + 4*3 = 15 $$
+
+$$ \hat{Y} = 3 + 4*4 = 19 $$
+
+- When `\(X\)` increases by `\(1\)`, `\(Y\)` increases by the slope (which is `\(4\)` here)
+
+---
+
+# Ordinary Least Squares
+
+SO!
+
+- Regression fits a *shape* to the data
+- Ordinary least squares specifically fits a *straight line* to the data
+- The straight line is described using an `\(intercept\)` and a `\(slope\)`
+- When we plug an `\(X\)` into the line, we get a prediction for `\(Y\)`, which we call `\(\hat{Y}\)`
+- When `\(X = 0\)`, we predict `\(\hat{Y} = intercept\)`
+- When `\(X\)` increases by `\(1\)`, our prediction of `\(Y\)` increases by the `\(slope\)`
+- If `\(slope &gt; 0\)`, `\(X\)` and `\(Y\)` are positively related/correlated
+- If `\(slope &lt; 0\)`, `\(X\)` and `\(Y\)` are negatively related/correlated
+
+---
+
+# Concept Checks
+
+- How does producing a *line* let us use `\(X\)` to predict `\(Y\)`? 
+- If our line is `\(Y = 5 - 2*X\)`, explain what the `\(-2\)` means in a sentence
+- Not all of the points are exactly on the line, meaning some of our predictions will be wrong! Should we be concerned? Why or why not?
+
+---
+
+# How?
+
+- We know that regression fits a line
+- But how does it do that exactly?
+- It picks the line that produces the *smallest squares*
+- Thus, "ordinary least squares"
+- Wait, huh?
+
+---
+
+# Predictions and Residuals
+
+- Whenever you make a prediction of any kind, you rarely get it *exactly right*
+- The difference between your prediction and the actual data is the *residual*
+
+$$ Y = 3 + 4*X $$
+
+If we have a data point where `\(X = 4\)` and `\(Y = 18\)`, then
+
+$$ \hat{Y} = 3 + 4*4 = 19 $$
+
+Then the *residual* is `\(Y - \hat{Y} = 18 - 19 = -1\)`.
+
+---
+
+# Predictions and Residuals
+
+So really, our relationship doesn't look like this...
+
+$$ Y = intercept + slope*X $$
+
+Instead, it's...
+
+$$ Y = intercept + slope*X + residual $$
+
+We still use `\(intercept + slope*X\)` to predict `\(Y\)` though, so this is also
+
+$$ Y = \hat{Y} + residual $$
+
+---
+
+# Ordinary Least Squares
+
+- As you'd guess, a good prediction should make the residuals as small as possible
+- We want to pick a line to do that
+- And in particular, we're going to *square* those residuals, so the really-big residuals count even more. We really don't want to have points that are super far away from the line!
+- Then, we pick a line to minimize those squared residuals ("least squares")
+
+---
+
+# Ordinary Least Squares
+
+- Start with our data
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-6-1.png)&lt;!-- --&gt;
+
+---
+
+# Ordinary Least Squares
+
+- Let's just pick a line at random, not necessarily from OLS
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-7-1.png)&lt;!-- --&gt;
+
+---
+
+
+# Ordinary Least Squares
+
+- The vertical distance from point to line is the residual
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-8-1.png)&lt;!-- --&gt;
+
+---
+
+# Ordinary Least Squares
+
+- Now square those residuals
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-9-1.png)&lt;!-- --&gt;
+
+---
+
+# Ordinary Least Squares
+
+- Can we get the total area in the squares smaller with a different line?
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-10-1.png)&lt;!-- --&gt;
+
+---
+
+# Ordinary Least Squares
+
+- Ordinary Least Squares, I can promise you, gets it the smallest
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-11-1.png)&lt;!-- --&gt;
+
+--- 
+---
+
+# Ordinary Least Squares
+
+- How does it figure out which line makes the smallest squares?
+- There's a mathematical formula for that!
+- First, instead of thinking of `\(intercept\)` and `\(slope\)`, we reframe the line as having *parameters* we can pick
+
+$$ Y = intercept + slope*X + residual $$
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+---
+
+# Terminology Sidenote
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+- In statistics and econometrics, Greek letters represent "the truth" - in *the true process by which the data is generated*, a one-unit increase in `\(X\)` is related to a `\(\beta_1\)` increase in `\(Y\)`
+- When we put a hat on anything, that is our *prediction* or *estimation* of that true thing. `\(\hat{Y}\)` is our prediction of `\(Y\)`, and `\(\hat{\beta_1}\)` is our estimate of what we think the true `\(\beta_1\)` is
+- Note the switch from "residual" to `\(\varepsilon\)` - residuals are what's actually left over from our prediction in the real data, but the *error* `\(\varepsilon\)` is the *true* difference between our line and `\(Y\)`. Even if we get the correct line with `\(\beta_0\)` and `\(\beta_1\)`, there are still points off the line! 
+
+---
+
+# Ordinary Least Squares
+
+- Now that we have our line in parametric terms, we can pick our *estimates* of `\(\beta_0\)` and `\(\beta_1\)` in order to make the squared residuals as small as possible
+- Pick `\(\hat{\beta_0}\)` and `\(\hat{\beta_1}\)` to minimize:
+
+$$ \sum_i (residual_i^2) $$
+
+$$ \sum_i ((Y_i - \hat{Y})^2) $$
+
+$$ \sum_i ((Y_i - \hat{\beta_0} - \hat{\beta_1}X_i)^2) $$
+
+Where the `\(_i\)` refers to a particular observation. `\(\sum_i\)` means "sum this up over all the observations"
+
+(Conveniently, you can pick `\(\hat{\beta_0}\)` and `\(\hat{\beta_1}\)` to minimize that expression with basic calculus)
+
+---
+
+# Let's Play
+
+- Take a look at this OLS simulator and play around with it: [https://econometricsbysimulation.shinyapps.io/OLS-App/](https://econometricsbysimulation.shinyapps.io/OLS-App/)
+- Click "Show Residuals" to turn that on
+- Try different data generating processes and standard deviations
+- What settings make the residuals small or large? Any guesses why?
+- What happens if you take the intercept out? What does that make our line do?
+- How close does the line come to the data generating process? Intercept and slope are in the second table below the graph under "Estimate"
+
+--- 
+---
+
+# Concept Checks
+
+- Why might we want to minimize squared residuals rather than just residuals?
+- What's the difference between a residual and an error?
+- If I have the below OLS-fitted line from a dataset of children:
+
+$$ Height (Inches) = 18 + 2*Age$$
+
+And we have the kids Darryl who is 10 years old and 40 inches tall, and Bijetri who is 9 years old and 37 inches tall, what are each of their: (a) predicted values, (b) residuals, and then what is the sum of their squared residuals?
+
+---
+
+# Ordinary Least Squares in R
+
+- Ordinary Least Squares is built in to R using the `lm` function
+- Let's run a regression on the `Orange` data set of tree age and circumference
+
+
+```r
+data(Orange)
+lm(circumference ~ age, data = Orange)
+```
+
+```
+## 
+## Call:
+## lm(formula = circumference ~ age, data = Orange)
+## 
+## Coefficients:
+## (Intercept)          age  
+##     17.3997       0.1068
+```
+
+--- 
+---
+
+# Ordinary Least Squares in R
+
+- What's going on here?
+
+
+
+- `circumference ~ age` is a *formula* object. It says to take the `circumference` variable and treat that as our dependent variable `\((Y)\)`. Have it vary (`~`) according to `age` (independent variable, `\(X\)`)
+- `data = Orange` tells it the data set to look for those variables in
+- The output shows the `(Intercept)` `\((\hat{\beta}_0)\)` as well as the slope `\((\hat{\beta}_1)\)` on `age` (why doesn't it just say `slope`? Because later we'll have more than one slope!)
+
+---
+
+# Ordinary Least Squares in R
+
+- There's lots more information we can get from our regression, but that will wait for later
+- For now, let's just make a nice graph of it using `effect_plot` in the **jtools** library (make sure it's installed first with `install.packages('jtools')`)
+
+
+```r
+library(jtools)
+my_regression &lt;- lm(circumference ~ age, data = Orange)
+effect_plot(my_regression,
+            pred = age,
+            plot.points = TRUE)
+```
+
+- `effect_plot` need us to *save our regression object* to give it, then tell it what variable we want as our x-axis with `pred`, and if we want the raw data on there, we say `plot.points = TRUE`
+
+---
+
+# Ordinary Least Squares in R
+
+- The result:
+
+![](Week_02_Slides_1_What_is_Regression_files/figure-html/unnamed-chunk-15-1.png)&lt;!-- --&gt;
+
+---
+
+# Practice
+
+- Let's work through the "Ordinary Least Squares Part 1" module in the econometrics **swirl**
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

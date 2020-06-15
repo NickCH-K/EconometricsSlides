@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Ordinary Least Squares</title>
+    <meta charset="utf-8" />
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <link href="libs/remark-css/metropolis.css" rel="stylesheet" />
+    <link href="libs/remark-css/metropolis-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Ordinary Least Squares
+## Part 2: Variation
+### Updated 2020-06-07
+
+---
+
+
+
+
+
+# Recap
+
+- Regression is the practice of fitting a *shape* to data so as to explain the relationship more generally
+- Ordinary least squares fits a *straight line*
+- It picks the straight line that minimizes the *sum of squared residuals*
+- That line has an intercept `\(\beta_0\)` (Our prediction `\(\hat{Y}\)` when `\(X = 0\)`) and a slope `\(\beta_1\)` (how much higher we predict `\(Y\)` will be when we look at an `\(X\)` one unit higher)
+- The *residual* is the difference between our prediction `\(\hat{Y} = \hat{\beta}_0 + \hat{\beta}_1X\)` and the actual number `\(Y\)`
+
+$$ Y = \beta_0 + \beta_1 X + \varepsilon $$
+$$ \hat{Y} = \hat{\beta}_0 + \hat{\beta}_1X $$
+
+---
+
+# Error
+
+- We have an idea that there's this *true* relationship `\(Y = \beta_0 + \beta_1 X + \varepsilon\)`
+- We can also call that relationship the *data-generating process*: this equation actually explains where our `\(Y\)` observations come from
+- What we are trying to do by estimating OLS is to get an estimate of `\(\beta_0\)` that's as close to `\(\beta_0\)` as possible
+- And an estimate of `\(\beta_1\)` that's as close to `\(\beta_1\)` as possible
+- The difference between our *estimate* `\(\hat{\beta}_1\)` and the actual true `\(\beta_1\)` is the *error*
+
+---
+
+# Error
+
+- There are two main source of error in our estimates
+- One is *sampling variation* which is random
+- The other is *bias* which is systematic
+
+---
+
+# Sampling Variation
+
+- The true relationship/data-generating process represents the *underlying process* whereby we see `\(X\)` and `\(Y\)` being related to each other. If, truly, `\(Y = \beta_0 + \beta_1X + \varepsilon\)`, then `\(X\)` *causes* `\(Y\)`
+- However, we can't see all the data, we can only see a sample
+- The point of statistics generally is to generalize from that sample to figure out the underlying process
+- And, just by chance, the best-fit line is going to be different in each sample
+- The variation in `\(\hat{\beta}_0\)` and `\(\hat{\beta}_1\)` that occurs *purely because of that random sampling is sampling variation
+
+---
+
+# Sampling Variation
+
+- Let's make data so we can see just how much of a deal sampling variation is!
+- The true data-generating process is `\(Y = 3 + 2X\)`
+- This is the FULL data set. We estimate `\(\hat{\beta}_0 = 3.099\)` and `\(\hat{\beta}_1 = 1.956\)`. Not too far from the truth!
+
+![](Week_02_Slides_2_Properties_of_Regression_files/figure-html/unnamed-chunk-1-1.png)&lt;!-- --&gt;
+
+---
+
+# Sampling Variation
+
+- Let's take a subsample only two points at a time. The best-fit line for them is pretty obvious!
+- If we do this a lot of times, how much do we vary?
+
+![](Week_02_Slides_2_Properties_of_Regression_files/figure-html/unnamed-chunk-2-1.gif)&lt;!-- --&gt;
+
+---
+
+# Sampling Variation
+
+- I took fifty two-observation subsamples here. How much did `\(\hat{\beta}_1\)` vary?
+- A lot! Look at those HUGE left and right observations. And even closer to the center it varied a lot!
+
+![](Week_02_Slides_2_Properties_of_Regression_files/figure-html/unnamed-chunk-3-1.png)&lt;!-- --&gt;
+
+---
+
+# Sampling Variation
+
+- As N goes up, the distribution gets a lot cleaner
+- And more of the weight gathers around the true value (assuming we're not biased - more on that later)
+- This graph is the same but uses subsamples of 100
+
+![](Week_02_Slides_2_Properties_of_Regression_files/figure-html/unnamed-chunk-4-1.png)&lt;!-- --&gt;
+
+---
+
+# Sampling Variation
+
+- Due to sampling variation, the OLS coefficients are *themselves random variables*
+- In particular, they follow a normal distribution (thanks, central limit theorem!)
+- Assuming bias is not an issue, the *mean* of that normal distribution is the true value `\(\beta_1\)` (and `\(\beta_0\)`) (but whatever the mean is, we only have our *one* sample)
+- The *standard deviation of the sampling distribution* (the *standard error*) is based on quality of prediction, sample size, and variation in `\(X\)`
+- And as the sample gets really big, the variance of the distribution shrinks, making it more likely we get really close to the truth
+
+---
+
+# Sampling Variation
+
+- The distribution of an OLS coefficient is
+
+$$ \hat{\beta} \sim N(\beta, \hat{\sigma}/\sqrt{N\times var(X)}) $$
+
+That is, the mean of the `\(\hat{\beta}\)` sampling distribution is the true `\(\beta\)`, and the standard deviation is the *standard deviation of the regression* divided by `\(N\)` (the sample size) times the variance of `\(X\)`
+
+- `\(\hat{\sigma}\)` is roughly the variance of the residuals: it's the sum of squared residuals divided by `\(N-k\)`, where `\(k\)` is the number of variables in the regression (including the constant)
+
+---
+
+# Sampling Variation
+
+- What does that tell us? 
+
+$$ \hat{\beta} \sim N(\beta, \hat{\sigma}/\sqrt{N\times var(X)}) $$
+
+- The bigger the residuals are/worse the model is at explaining `\(Y\)` `\((\hat{\sigma})\)`, the noisier `\(\hat{\beta}\)` is - we're explaining poorly so our `\(\hat{\beta}\)` is based on noise more than signal
+- The more observations `\((N)\)`, the less error there is in our estimate (more data to go on)
+- The more variation there is in `\(X\)` `\((var(X))\)`, the more precise our estimate - we can really see `\(X\)` moving around a lot, so it's really easy to catch whether `\(Y\)` tends to be moving with it
+
+---
+
+# Sampling Variation
+
+- Let's return to the OLS simulator: [https://econometricsbysimulation.shinyapps.io/OLS-App/](https://econometricsbysimulation.shinyapps.io/OLS-App/) 
+- This time look at the *standard error* in that second table under the graph. 
+- Move things around. How does it change? 
+- With smaller standard errors, can you pick different seeds to make the estimate be far from the truth?
+
+---
+--- 
+
+# Concept Checks
+
+- The standard error is the standard deviation of *what*?
+- On average, the OLS estimate gives us the true `\(\beta\)`. Why be concerned about sampling variation at all then?
+- Consider two different studies with similar sample size and predictive accuracy: one looks at the effect of the stock market, which takes wild swings up and down regularly, on political unrest. The other looks at the effect of governmental structure, which changes rarely, on political unrest. Which study will have a more precise estimate of its OLS slope?
+- Without referring to the standard error equation, *why* might we expect that study to have a more precise estimate?
+
+---
+
+# Bias and the Error Term
+
+- All of the nice stuff we've gotten so far makes some assumptions about our true model
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+- In particular, we've made some assumptions about the error term `\(\varepsilon\)`
+- So what is that error term exactly, and what are we assuming about it?
+
+---
+
+# The Error Term
+
+- The error term contains everything that isn't in our model
+- If `\(Y\)` were a pure function of `\(X\)`, for example if `\(Y\)` was "height in feet" and `\(X\)` was "height in inches", we wouldn't have an error term, because a straight line fully describes the relationship perfectly with no variation
+- But in most cases, the line is a simplification - we're leaving other stuff out! That's in the error term
+
+---
+
+# The Error Term
+
+- Consider this data generating process:
+
+$$ ClassGrade = \beta_0 + \beta_1 StudyTime + \varepsilon $$
+
+- Surely StudyTime isn't the *only* thing that determines your ClassGrade
+- Everything else is in the error term!
+- ProfessorLeniency, InterestInSubject, Intelligence, and so on and so on...
+
+---
+
+# The Error Term
+
+- Isn't that really bad? We're leaving out a bunch of important stuff!
+- It depends on what your goal is
+- If you want to *predict `\(Y\)` as accurately as possible* then we're probably going to do a bad job of it
+- But if our real interest is *figuring out the relationship between `\(X\)` and `\(Y\)`, then it's fine to leave stuff out, as long as whatever's left in the error term obeys a few important assumptions
+- The latter goal - understanding relationships and estimating parameters accurately - is what econometrics is more concerned with
+- The former - predicting accurately - is more the domain of data scientists these days
+
+---
+
+# Error Term Assumptions
+
+- The most important assumption about the error term is that it is *unrelated to `\(X\)`*
+- If `\(X\)` and `\(\varepsilon\)` are correlated, `\(\hat{\beta}_1\)` will be *biased* - its distribution no longer has the true `\(\beta_1\)` as its mean
+- In these cases we can say " `\(X\)` is **endogenous**" or "we have **omitted variable bias**"
+- No amount of additional sample size will fix that problem!
+- (what will fix the problem? We'll get to that one later)
+
+---
+
+# Endogeneity
+
+- Why will this bias `\(\hat{\beta}_1\)`?
+- Let's say the data generating process looks like the below diagram, but we estimate `\(ClassGrade = \beta_0 + \beta_1 StudyTime + \varepsilon\)`
+- Because InterestInSubject affects both ClassGrade and StudyTime, you'll see people with both high ClassGrade and high StudyTime, but not becuase StudyTime caused ClassGrade, rather because InterestInSubject caused both!
+
+![](Week_02_Slides_2_Properties_of_Regression_files/figure-html/unnamed-chunk-5-1.png)&lt;!-- --&gt;
+
+---
+
+# Let's Check
+
+- Let's create some data where the true effect of StudyTime (hours) on ClassGrade (grade points) is .1
+
+
+
+
+```r
+tb &lt;- tibble(InterestInSubject = runif(200)) %&gt;%
+  # Since InterestInSubject is used to make StudyTime, we know they're related
+  mutate(StudyTime = 4*runif(200) + InterestInSubject) %&gt;%
+  mutate(ClassGrade = .1*StudyTime + InterestInSubject)
+
+# InterestInSubject is not in the model, it's in the error!
+lm(ClassGrade ~ StudyTime, data = tb)
+```
+
+```
+## 
+## Call:
+## lm(formula = ClassGrade ~ StudyTime, data = tb)
+## 
+## Coefficients:
+## (Intercept)    StudyTime  
+##      0.2969       0.1823
+```
+
+- Uh oh...
+
+---
+
+# Let's Check
+
+- Importantly, a single estimate being off isn't necessarily a concern. That could be sampling bias!
+- But if we do that exact same analysis 500 times and look at the sampling distribution?
+- That mean is nowhere near the truth! We're definitely biased by endogeneity
+
+![](Week_02_Slides_2_Properties_of_Regression_files/figure-html/unnamed-chunk-8-1.png)&lt;!-- --&gt;
+
+---
+
+# Omitted Variable Bias
+
+- We can intuitively think about whether omitted variable bias is likely to make our estimates too high or too low
+- The sign of the bias will be the sign of the relationship between the omitted variable and `\(X\)`, **times** the sign of the relationship between the omitted variable bias and `\(Y\)`
+- InterestInSubject is positively related to both StudyTime and ClassGrade, and `\(+\times+ = +\)`, so our estimates are positively biased / too high
+- More precisely we have that the mean of the `\(\hat{\beta}_1\)` sampling distribution is
+
+`$$\beta_1 + corr(X,\varepsilon)\frac{\sigma_\varepsilon}{\sigma_X}$$`
+
+(notice that `\(\varepsilon\)` has a positive effect on `\(Y\)`, which is where we get the "both signs multiplied together" thing)
+
+---
+
+# Less Serious Error Concerns
+
+- Omitted variable bias can, well, bias us, which is very bad
+- There are some other assumptions that can fail that may also pose a problem to us but less so
+- We've assumed so far not just that `\(\varepsilon\)` is unrelated to `\(X\)`, but also that the *variance* of `\(\varepsilon\)` is unrelated to `\(X\)`, and that the `\(\varepsilon\)`s are unrelated to each other
+- If these assumptions fail, our standard errors will be wrong, but we won't be biased, and also there are ways to fix the standard errors
+- We will cover these only briefly, they'll come back later
+
+---
+
+# Heteroskedasticity
+
+- If the variance of the error term is different for different values of `\(X\)`, then we have "heteroskedasticity"
+- Notice in the below graph how the spread of the points around the line (the variance of the error term) is bigger on the right than the left
+
+![](Week_02_Slides_2_Properties_of_Regression_files/figure-html/unnamed-chunk-9-1.png)&lt;!-- --&gt;
+
+---
+
+# Heteroskedasticity
+
+- We can correct for this using *heteroskedasticity-robust standard errors* which sort of "squash down" the big variances and then re-estimate the standard errors
+- We can do this in `export_summs` in **jtools** with `robust = TRUE`
+
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 50%; margin-left: auto; margin-right: auto;  ">
+<col><col><tr>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Model 1</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(Intercept)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.00&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(0.08)&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">X</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.54 *</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.26)&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">N</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">200&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">R2</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.02&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;">Standard errors are heteroskedasticity robust.  *** p &lt; 0.001;  ** p &lt; 0.01;  * p &lt; 0.05.</td>
+</tr>
+</table>
+
+
+---
+
+# Correlated Errors
+
+- If the error terms are *correlated with each other*, then our standard errors will also be wrong
+- How could this happen? For example, maybe you've surveyed a bunch of people in different towns - the error terms within a town might be *clustered*
+- Or maybe you have time series data. If a term in the error term is "sticky" or has "momentum" it will likely be a similar error term a few time periods in a row, beign correlated across time, or *autocorrelated*
+- Again, this doesn't bias `\(\hat{\beta}_1\)` but it can affect standard errors!
+
+---
+
+# Clustered Errors
+
+- We'll leave autocorrelation to our time series segment
+- But for clustering we can just use *cluster-robust standard errors*. We just need to also give it the variable that we think the errors are clustered in
+
+<table class="huxtable" style="border-collapse: collapse; margin-bottom: 2em; margin-top: 2em; width: 50%; margin-left: auto; margin-right: auto;  ">
+<col><col><tr>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0pt 0pt; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: center; white-space: nowrap; border-style: solid solid solid solid; border-width: 0.8pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">Model 1</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(Intercept)</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">17.40&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">(8.62)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">age</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">0.11 ***</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;"></td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.4pt 0pt; padding: 4pt 4pt 4pt 4pt;">(0.01)&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">N</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; padding: 4pt 4pt 4pt 4pt;">35&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td style="vertical-align: top; text-align: left; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">R2</td>
+<td style="vertical-align: top; text-align: right; white-space: nowrap; border-style: solid solid solid solid; border-width: 0pt 0pt 0.8pt 0pt; padding: 4pt 4pt 4pt 4pt;">0.83&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+<td colspan="2" style="vertical-align: top; text-align: left; white-space: normal; padding: 4pt 4pt 4pt 4pt;"> *** p &lt; 0.001;  ** p &lt; 0.01;  * p &lt; 0.05.</td>
+</tr>
+</table>
+
+
+---
+
+# Concept Checks
+
+- What's the difference between an error term and a residual?
+- If there are important variables predicting `\(Y\)` in the error term, what needs to be true for `\(\hat{\beta}_1\)` to still be unbiased?
+- Major external investments affect both a firm's free cash reserves (positively) and its profits (negatively). Cash reserves also affects profits. If we estimate `\(Profits = \beta_0 + \beta_1 CashReserves + \varepsilon\)`, will `\(\hat{\beta}_1\)` be biased *too high* or *too low*?
+- Draw what the sampling distribution of `\(\hat{\beta}_1\)` might look like, with a vertical line where the true `\(\beta_1\)` is
+- Draw a graph with heteroskedastic data
+
+---
+
+# Practice
+
+- Let's work through the "Ordinary Least Squares Part 2" module in the econometrics **swirl**
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
