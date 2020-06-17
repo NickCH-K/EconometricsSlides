@@ -4,6 +4,7 @@ subtitle: "Part 2: Variation"
 date: "Updated `r Sys.Date()`"
 output:
   xaringan::moon_reader:
+    self_contained: TRUE
     css: [default, metropolis, metropolis-fonts]
     lib_dir: libs
     # Run xaringan::summon_remark() for this

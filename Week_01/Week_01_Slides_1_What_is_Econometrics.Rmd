@@ -4,6 +4,7 @@ subtitle: "other than a class we're forcing you to take"
 date: "Updated `r Sys.Date()`"
 output:
   xaringan::moon_reader:
+    self_contained: TRUE
     css: [default, metropolis, metropolis-fonts]
     lib_dir: libs
     # Run xaringan::summon_remark() for this
@@ -372,7 +373,7 @@ ggdag_classic(dag, size = 5) +
 - Click "Discover a correlation" at the bottom. Play with it and find a correlation.
 - Do you think this correlation is an example of inferential error (just random chance) or identification error (truly *related*, but not because one causes the other)? Why?
 
---- 
+---
 
 # For Next Time
 
