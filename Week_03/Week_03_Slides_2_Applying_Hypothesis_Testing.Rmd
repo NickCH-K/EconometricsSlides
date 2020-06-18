@@ -1,0 +1,390 @@
+---
+title: "Applying Hypothesis Testing"
+subtitle: "Part 2: How to Do It"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, dev.args = list(png = list(type = "cairo")), warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(jtools)
+library(scales)
+library(car)
+# remotes::install_github('hadley/emo')
+library(emo)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Recap
+
+- We are trying to characterize the *uncertainty* in our estimate that comes from sampling variation
+- One way to do this is to characterize the sampling distribution: show the standard error and construct a confidence interval
+- Another is if we have a *null hypothesis* of interest - for parameters giving relationships like slopes, usually that the parameter is 0 (no relationship)
+- Then we can look at the sampling distribution *assuming the null is true* and see if our actual result is too weird to believe; if it is, reject the null!
+
+---
+
+# The Null Distribution
+
+- Hypothesis testing centers around the concept of the sampling distribution and, further, the null distribution
+- We've talked so far about parameters that have a normal sampling distribution, i.e. follow a normal distribution
+- This is a key assumption to have made
+- We have to have an idea of what the null distribution of our parameter *is* in order to figure out *how weird* our result is
+
+---
+
+# The Normal Null
+
+- Let's talk about the normal distribution some more to get more intuition on what's happening, then branch out. 
+- When we have an estimate, like $\hat{\beta}_1$, that follows a normal distribution, we know that the sampling distribution:
+    - Is symmetric
+    - Can be wider or narrower depending on the standard error
+    - Can be transformed into a "standard normal" (mean 0 and standard deviation 1) by subtracting the mean and dividing by the standard deviation
+
+---
+
+# The Normal Null
+
+- Because of that last point, when evaluating an estimate like $\hat{\beta}_1$ we will transform it into a *Z-score*, which is
+
+$$\frac{\hat{\beta}_1 - Null}{s.e.(\hat{\beta_1})}$$
+
+- That is, we subtract our null hypothesis value and divide by the standard error
+- This Z-score is our *test statistic*
+
+---
+
+# The Normal Null
+
+- Why do this transformation? Because the *sampling distribution assuming the null is true* is a normal with mean $Null$ and standard error $s.e.(\beta_1)$
+- So by subtracting the null (mean of the sampling distribution) and dividing by $s.e.(\beta_1)$ (standard deviation of the sampling distribution), the distribution under the null becomes a normal with mean-0 and standard-deviation-1, the standard normal. Very easy to work with!
+- The sampling distribution *of $\hat{\beta}_1$* under the null was the original normal distribution we started with, but the sampling distribution *of the Z-Score* under the null is a normal with mean 0 and s.d. 1
+- So if 2.5% of the area of the distribution is above our original estimate of $4.92$ in the original null distribution with mean $1$ and s.e. $2$, then 2.5% of the area will also be above our Z-score of $(4.92-1)/2$ in the standard normal
+
+
+---
+
+# The Normal Null
+
+- This brings us to the concept of *critical values*
+- When we pick an $\alpha$, we will reject the null if the p-value is below $\alpha$
+- This happens if $\hat{\beta}_1$ is a certain distance away from the null or farther
+- If we use the *same distribution every time* (standard null), that distance will always be the same!
+- So instead of checking the percentage under the distribution every time, we just figure out a critical value and see if we're farther away from that. Much easier!
+
+---
+
+# The Normal Null
+
+- For the standard normal, 5% is outside the bounds of $Z = -1.96$ and $Z = 1.96$ (2.5% on each side - a two-sided test!) Remember this number?
+- For 10% it's 1.65 and for 1% it's 2.58. How much area is in each shaded part?
+
+```{r}
+df <- data.frame(x = -300:300/100, y = dnorm(-300:300/100))
+
+ggplot(df, aes(x = x, y = y)) + geom_line() + 
+  scale_x_continuous(breaks = qnorm(c(.05,.025,.005,.95,.975,.995)), labels = number) + 
+  labs(x = "X", y = "Density") +
+  theme_metro() + 
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = -20)) + 
+  geom_ribbon(data = filter(df, x <= qnorm(.05) | x > qnorm(.95)), mapping = aes(x = x, ymin = 0, ymax = y, group = x > 0),
+              fill = 'red', alpha = .5) +
+  geom_ribbon(data = filter(df, x <= qnorm(.025) | x > qnorm(.975)), mapping = aes(x = x, ymin = 0, ymax = y, group = x > 0),
+              fill = 'blue', alpha = .5) + 
+  geom_ribbon(data = filter(df, x <= qnorm(.005) | x > qnorm(.995)), mapping = aes(x = x, ymin = 0, ymax = y, group = x > 0),
+              fill = 'orange')
+```
+
+---
+
+# The Normal Null
+
+- This critical-value approach means that we can check results much more easily
+- Look at this regression table regressing number of house listings on "months it would take to sell this inventory". We can eyeball a test with a null of 0 at the 95% confidence level by calculating the test statistic in our heads and comparing to 1.96 (or 2 to be even easier) - when the null is 0, the Z-score is just $\hat{\beta}_1/s.e.(\hat{\beta})$
+
+```{r}
+data(txhousing)
+housingmodel <- lm(listings ~ inventory, data = txhousing)
+export_summs(housingmodel)
+```
+
+---
+
+# Concept Checks
+
+- Why do we transform $\hat{\beta}_1$ into a Z-score?
+- When we transform $\hat{\beta}_1$, why do we have to use the null hypothesis value in our calculation?
+- Why do we have to use the standard error?
+- Is the coefficient on X in the below table significant at the 95% confidence level? Eyeball it!
+
+
+---
+
+# The Normal Null
+
+- So those are features of the normal null
+- When do we use the normal null?
+- Any time we have an *average* over *lots of observations*, the normal distribution pops up
+- (it's not obvious, but OLS coefficients are averages)
+- So for OLS coefficients, we just need "a lot of observations" to use a normal
+
+---
+
+# When Not to Use the Normal
+
+- Small samples (how small is "small?" 0-30 is definitely small, 100+ probably not small, 30-100 gray area)
+- Things that aren't means, like ratios
+- In these cases, what can we do instead?
+
+---
+
+# The t-distribution
+
+- The t-distribution is very similar to a normal distribution, except that it applies to means of smaller sample sizes, and instead of a mean and s.d. it has a number of degrees of freedom that determines how wide it is
+- When you have fewer observations, you're more likely to get a mean that's far from the true mean, i.e. "fatter tails"
+
+```{r}
+dnt <- data.frame(x = -300:300/100, y = dnorm(-300:300/100), yt = dt(-300:300/100, 5), yt2 = dt(-300:300/100, 28))
+
+ggplot(dnt, aes(x = x, y = y)) + 
+  geom_line(color = 'red') + 
+  geom_line(aes(x = x, y = yt), color = 'blue') + 
+  geom_line(aes(x = x, y = yt2), color = 'orange') + 
+  theme_metro() + 
+  theme(panel.grid = element_blank()) +
+  labs(x = "Value", y = "Density") + 
+  annotate(geom = 'text', x = 1.5, y = .4, color = 'red', label = 'Standard normal', hjust = 0, size = 16/.pt) + 
+  annotate(geom = 'text', x = 1.5, y = .375, color = 'blue', label = 't (dof = 5)', hjust = 0, size = 16/.pt) + 
+  annotate(geom = 'text', x = 1.5, y = .35, color = 'orange', label = 't (dof = 28)', hjust = 0, size = 16/.pt)
+```
+
+---
+
+# The t-distribution
+
+- So, for smaller samples, it's a good idea to use the critical value from a t distribution than from a normal
+- We do the same subtract-the-mean-and-divide-by-s.e. steps, just now we call it a t-score rather than a z-score
+- How can we find the critical values of the t distribution? Don't bother memorizing, as they change depending on your sample size. Instead use a function that measures the proportion of the distribution weirder than a value, and take the inverse to get the critical value!
+
+```{r, echo = TRUE}
+qt(.025, df = 28)
+```
+
+- (psst... we could have also done that with the normal: `qnorm(.025) = ` `r qnorm(.025)`)
+
+---
+
+# Small Samples
+
+- Using a null t-distribution when dealing with a small sample is important
+- But it's not the only issue with small samples (even small samples large enough to use a normal!)
+- The practice of hypothesis testing in general makes small samples more perilous!
+
+---
+
+# Small Samples
+
+- Small samples reduce *power* considerably - it becomes difficult to reject a false null
+- And also, the estimate in general will be much noisier!
+- As samples get small, the number of *true rejections* drops as power drops, but the number of *super extreme noisy results* goes up!
+- Think back to that animation where we had $N = 2$...
+- So the smaller your sample, the better the chance that a given rejection of a null is a false positive rather than a true positive
+
+---
+
+# Small Samples
+
+- Small samples also make it harder to detect small effects
+- Power, false positive rates, and false negative rates rely not just on sample size and $var(X)$, but also *how big the true effect is that you are trying to find*
+- Big effects are easy to find - $N = 2$ could tell you whether a parachute saves you from death
+- Tiny effects need big samples to have power and estimate effects precisely - to have a 90% chance to reject the null of 0 effect for a pill that truly increases your IQ by .003 points you'd need a sample of about 8 billion
+
+---
+
+# Small Samples
+
+- So in general:
+    - Don't pay *too* much attention to studies with small samples
+    - If a result is truly wild and unexpected, check if the sample is small - good chance it's just noise
+    - If you do have to work with a small sample, maybe avoid hypothesis tests
+    - But if you do use a test, use a t distribution null.
+
+---
+
+# F distribution
+
+- Another null distribution that comes up a lot is the *F distribution*
+- The F distribution is a distribution of *the ratio of two squared normal variables* (or the ratio of two sums of squared normal variables), a.k.a. the ratio of two $\chi^2$ distributed variables
+
+```{r}
+dfd <- data.frame(x = 0:300/100, y = df(0:300/100,1, 1), y2 = df(0:300/100, 1, 50), y3 = df(0:300/100, 5, 35))
+
+ggplot(dfd, aes(x = x, y = y)) + 
+  geom_line(color = 'red') + 
+  geom_line(aes(x = x, y = y2), color = 'blue') + 
+  geom_line(aes(x = x, y = y3), color = 'orange') + 
+  theme_metro() + 
+  theme(panel.grid = element_blank()) +
+  labs(x = "Value", y = "Density") + 
+  annotate(geom = 'text', x = 1.5, y = 1.1, color = 'red', label = 'F (df1 = 1, df2 = 1)', hjust = 0, size = 16/.pt) + 
+  annotate(geom = 'text', x = 1.5, y = .9, color = 'blue', label = 'F (df1 = 1, df2 = 50)', hjust = 0, size = 16/.pt) + 
+  annotate(geom = 'text', x = 1.5, y = .7, color = 'orange', label = 'F (df1 = 5, df2 = 35)', hjust = 0, size = 16/.pt)
+```
+---
+
+# F distribution
+
+- Why does this come up? Because it's useful for *comparing models*
+- If we use a squared normal variable to measure some quality of a model (hint: OLS tries to minimize the sum of **squared** residuals; we can turn that into a measure of model fit, we'll get to that later)
+- Then we can compare models by dividing one measure by the other
+- If we surpass the critical value, then we can reject that the two models are equally good!
+
+---
+
+# F distribution
+
+- Instead of a mean and a standard deviation, the F distribution is defined by two *degrees of freedom*, for the number of squared normals in the numerator and denominator, respectively
+- When we're doing a comparison of models, these degrees of freedom will be based on *how many parameters* are being compared and the sample size
+- We'll do more of that when we get to multivariate regression
+- For now, we have one degree of freedom up top, and $N-1$ degrees of freedom on the bottom
+
+---
+
+# F distribution
+
+- When we use the F distribution to do a test of a single regression coefficient, we're comparing the model with the variable included against the model without it included (i.e. $Y = \beta_0 + \beta_1X$ vs. $Y = \beta_0$ )
+- The p-value will be exactly the same as if we'd used a normal null for a null hypothesis value of 0
+- But, as mentioned, F distributions will be more handy when we get to multivariate regression
+
+---
+
+# F distribution
+
+```{r}
+hm2 <- lm(inventory~median,data=slice(txhousing,1:503))
+export_summs(hm2, error_format = 'p-value = {p.value}')
+paste('F statistic for the coefficient on median price is',number(linearHypothesis(hm2, 'median = 0')$F[2]), 'p-value =',number(linearHypothesis(hm2, 'median = 0')$`Pr(>F)`[2]))
+```
+
+---
+
+# F distribution
+
+- Testing one parameter with $496$ observations, so numerator df is $1$ and denominator is $496 - 1 = 495$
+
+```{r}
+dfd2 <- data.frame(x = 0:300/100, y = df(0:300/100,1, 495))
+
+ggplot(dfd2, aes(x = x, y = y)) + 
+  geom_line() + 
+  geom_ribbon(data = filter(dfd2, x >= linearHypothesis(hm2, 'median = 0')$F[2]), aes(x = x, ymin = 0, ymax = y),
+              alpha = .5) + 
+  scale_x_continuous(breaks = linearHypothesis(hm2, 'median = 0')$F[2], labels = function(x) number(x, accuracy = .001)) +
+  theme_metro() + 
+  theme(panel.grid = element_blank()) +
+  labs(x = "Value", y = "Density") + 
+  annotate(geom = 'text', x = .82, y = .17, label = percent(linearHypothesis(hm2, 'median = 0')$`Pr(>F)`[2]), 
+           hjust = 0, size = 16/.pt)
+```
+
+---
+
+# Concept Checks
+
+- Why do small samples increase the false negative rate (low power) but not increase the false positive rate?
+- You want to test a regression coefficient estimated from a N = 2000 sample with a null hypothesis value of 1/2. What null distribution should you use?
+- You want to test whether removing some variables from a regression model makes it worse. What null distibution should you use?
+- You want to test if the mean of $X$ is equal to $3$ or not, from a sample of 25 observations. What test should you use, and how should you calculate the test statistic?
+
+---
+
+# Hypothesis Testing in R
+
+- By default, regression results will perform tests using the t distribution
+- Rather than switching to a normal null for big samples, it will keep using t, but with large samples that's basically normal anyway
+- `summary(lm())` will show us the t-statistic as well as the p-value compared to 0
+- `export_summs()` (which will properly adjust the tests for heteroskedasticity if you ask!) will show only standard errors by default, but we can ask its `error_format` option for either `'{statistic}'` to get the t-stat, or `'{p.value}'` to get the p-value (or both)
+- (you could even ask `export_summs()` for a confidence interval with `error_format = [{conf.low}, {conf.high}]`, by default 95%)
+- Both will report "stars" - if the p-value is below a certain $alpha$, you get stars! By default, `*` means $p < .05$, `**` means $p < .01$, and `***` means $p < .001$.
+
+---
+
+# Hypothesis Testing in R
+
+```{r, echo = TRUE}
+data(SLID, package = 'carData')
+model <- lm(wages ~ education, data = SLID)
+summary(model)
+```
+
+---
+
+# Hypothesis Testing in R
+
+```{r, echo = TRUE}
+export_summs(model, error_format = '(t = {statistic}, p = {p.value})')
+```
+
+---
+
+# Hypothesis Testing in R
+
+- We can also see confidence intervals for our coefficients with `
+
+
+```{r, echo = TRUE}
+plot_coefs(model)
+```
+
+---
+
+# Hypothesis Testing in R
+
+- How about tests against non-0 nulls, or F tests?
+- We can calculate a z-score ourselves and do a non-0 null that way, or we can use `linearHypothesis` from **car** to do F-tests
+- Just tell it what value you want to test the coefficient against!
+
+```{r}
+library(car)
+linearHypothesis(model, c('education = 0'))
+linearHypothesis(model, c('education = .75'))
+```
+
+Again eyeing the regression table and looking at stars
+Using linearHypothesis
+(incl. with robust SEs)
+Plotting CIs and calculating CIs.
+
+
+---
+
+# Swirl Practice
+
+Now on to the Hypothesis Testing Swirl lesson!
