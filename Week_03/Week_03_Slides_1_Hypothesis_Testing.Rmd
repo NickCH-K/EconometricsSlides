@@ -87,7 +87,7 @@ Remember:
 
 - Greek letters like $\beta_1$ are the *truth*. They are part of the *true DGP*
 - Modified Greek letters like $\hat{\beta_1}$ are our *estimate*. They are what we *think* the truth is based on our data
-- English letters like $X$ are *actual data from our sample*
+- English (Latin) letters like $X$ are *actual data from our sample*
 - Modified English letters like $\bar{X}$ are *calculations from our sample*. They're what we *do* with our data (we can also just write out the calculation; $\bar{X}=(1/N)\sum_iX_i$)
 - We can say that our estimate of the truth is that calculation, e.g. $\hat{\mu} = \bar{X}$
 
@@ -111,7 +111,7 @@ $$ Data \rightarrow Calculation \rightarrow Estimate \xrightarrow[]{Hopefully!} 
 # Sampling Variation
 
 - We talked last time about *sampling variation in an estimate
-- This of course comes because data varies from saple to sample, and $Data \rightarrow Calculation \rightarrow Estimate$.
+- This of course comes because data varies from sample to sample, and $Data \rightarrow Calculation \rightarrow Estimate$.
 - In this data, the true $\beta_1$ is 2: $Y_i = 3 +2X_i + \varepsilon_i$
 
 ```{r}
