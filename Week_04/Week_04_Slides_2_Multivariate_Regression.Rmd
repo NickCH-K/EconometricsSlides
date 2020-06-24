@@ -1,0 +1,567 @@
+---
+title: "Multivariate Regression"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(ggthemes)
+library(dagitty)
+library(gganimate)
+library(car)
+library(ggdag)
+library(jtools)
+library(scales)
+library(Cairo)
+library(magick)
+# remotes::install_github('hadley/emo')
+library(emo)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_void_metro <- function(x) {
+  theme_void() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Controls
+
+- Last time we talked about multivariate regression and controlling for variables
+- If our $X$ of interest is related to the error term, we have endogeniety, and the mean of the sampling variation of $\hat{\beta}_1$ won't be $\beta_1$ (i.e. it's biased)
+- If we can figure out all the *other reasons* why $X$ and $Y$ might be related, we can control for them in the regression
+- We draw a causal diagram and list the paths
+- If we can control for one thing on each path, then that washes out the variation from those paths, and the only remaining reason $X$ and $Y$ are related is that $X$ causes $Y$ - causal identification!
+
+---
+
+# Today
+
+- Today we're going to talk more about controlling
+- Including when you *don't* want to control for things
+- We'll also talk about how to actually perform multivariate regression
+- As well as do some things that go along with it (those F-statistics will finally be useful!)
+
+---
+
+# Bad Controls
+
+- Last time, we were careful to draw a causal diagram, list out the paths, and control for something that would close each path we don't want to include
+- Couldn't we just skip this all and control for everything we can think of?
+- No! There are a few reasons why adding controls when you shouldn't can make your estimate worse:
+    - Washing out too much variation
+    - Post-treatment bias
+    - Collider bias
+
+---
+
+# Washing out Too Much Variation
+
+- When we control for a variable $Z$, we wash out all the variation in $X$ and $Y$ associated with that variable
+- Which means that we can also think of $\hat{\beta}_1$ from that regression as saying "*within the same value of $Z$*, a one-unit change in $X$ raises $Y$ by $\hat{\beta}_1$"
+- So we have to think carefully about whether that statement actually makes sense!
+- (this is very similar to the concept of "collinearity")
+
+---
+
+# Washing out Too Much Variation
+
+- For example, let's say we want to know the effect of being in the Seattle U business school $Albers$ on $Earnings$
+- However, we also know that your college major is strongly related to whether you're in Albers, and causes your $Earnings$
+- But if we control for $Major$, we're saying "within the same major, being in the business school vs. not has a $\hat{\beta}_1$ effect on earnings"
+- What does that even mean? You're comparing econ majors in vs. out of the business school... but who are the econ majors not in the business school? And who are the English majors *in* the business school to compare against the English majors not in Albers?
+- Controlling for major would make the regression impossible to interpret. Plus, it would provide an estimate based entirely on the few people it can find who are English majors in Albers or Econ majors out of Albers - is that representative?
+
+---
+
+# Washing out Too Much Variation
+
+- When adding a control, it's always useful to think about *who you're comparing* and if that variation really exists in the data
+- In thinking about the effect of being in $Albers$, we really want to compare people *between* in-Albers and out-of-Albers majors
+- Controlling for $Major$ is asking OLS to compare people *within* majors
+- So it doesn't really make sense to control for major. We want that effect in there!
+
+---
+
+# Post-Treatment Bias
+
+- Remember this diagram from last time?
+
+```{r, dev = 'CairoPNG'}
+dag <- dagify(Earnings ~ Preschool + Skills + Parents + Location + Background,
+              Skills ~ Preschool + Parents + Background,
+              Preschool ~ Parents + Location + Background,
+              coords=list(
+                x=c(Earnings = 3, Preschool = 1, Skills = 2, Background = 2, Location = 2),
+                y=c(Earnings = 1, Preschool = 1, Skills = 2, Background = 3, Location = 0)
+              )) %>% tidy_dagitty()
+ggdag_classic(dag,node_size=10) + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,3.5))
+
+```
+
+---
+
+# Post-Treatment Bias
+
+- We determined that we needed to control for $Location$ and $Background$ but not $Skills$. Why?
+- Because $Skills$ is *part of the effect we're trying to pick up!*
+- If $Preschool$ affects $Earnings$ *because it improves your $Skills$, then we'd count that as being a valid way that $Preschool$ affects $Earnings$
+- $Skills$ is *post-treatment*, i.e. caused by treatment
+- (note that all the arrows on the path $Preschool \rightarrow Skills \rightarrow Earnings$ point away from $Preschool$ )
+
+---
+
+# Post-Treatment Bias
+
+- What would happen if we *did* control for $Skills$? We'd be removing part of the real effect!
+- To give another example, does the $PriceOfCigarettes$ affect $Health$? It makes sense that it would
+- But it makes sense that it would *because the price would affect $Smoking$ which would affect $Health$
+- If we controlled for $Smoking$, then there's no way for the price to affect health!
+- We'd say that $PriceOfCigarettes$ has no effect when really it does
+
+```{r, dev='CairoPNG', echo=FALSE, fig.width=5, fig.height=1}
+dag <- dagify(Smoking~Price,
+              Health~Smoking,
+              coords=list(
+                x=c(Price=1,Smoking=2,Health=3),
+                y=c(Price=1,Smoking=2,Health=1)
+              )) %>% tidy_dagitty()
+ggdag_classic(dag,node_size=10) + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,3.5),y = c(.5,2.5))
+```
+
+---
+
+
+# Colliders
+
+- One last reason to not control for something, and this one's a bit harder to wrap your head around
+- On a causal path from $X$ to $Y$, if there's a variable on that path where *both arrows on either side point at it*, that's a *collider variable* on that path
+- Like this: `X <- W -> C <- Z -> Y`. The arrows "collide" at `C`
+- If there's a collider on a path, *that path is automatically closed already*
+- But if you control for the collider, *it opens back up!* 
+- You can go from identified to endogenous by *adding* a control!
+
+---
+
+# Colliders
+
+- So here, `x <- a -> m <- b -> y` is pre-blocked because of `m`, no problem. `a` and `b` are unrelated, so no back door issue!
+- Control for `m` and now `a` and `b` are related, back door path open.
+
+```{r, dev='CairoPNG', echo=FALSE, fig.width=5, fig.height=4}
+m_bias(x_y_associated=TRUE) %>%
+  ggdag_classic() + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,3.5))
+```
+
+---
+
+# Example
+
+- You want to know if programming skills reduce your social skills
+- So you go to a tech company and test all their employees on programming and social skills
+- Let's imagine that the *truth* is that programming skills and social skills are unrelated
+- But you find a negative relationship! What gives?
+
+---
+
+# Example
+
+- Oops! By surveying only the tech company, you controlled for "works in a tech company"
+- To do that, you need programming skills, social skills, or both! It's a collider!
+
+```{r, dev='CairoPNG', echo=FALSE, fig.width=5, fig.height=3.5}
+dag <- dagify(Hired~Programming,
+              Hired~Social,
+              coords=list(
+                x=c(Programming=1,Social=3,Hired=2),
+                y=c(Programming=2,Social=2,Hired=1)
+              )) %>% tidy_dagitty()
+ggdag_classic(dag,node_size=10) + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,3.5))
+```
+
+---
+
+# Example
+
+```{r, echo = FALSE}
+set.seed(14233)
+```
+
+```{r, echo=TRUE}
+survey <- tibble(prog=rnorm(1000),social=rnorm(1000)) %>%
+  mutate(hired = (prog + social > .25))
+basic <- lm(prog~social, data = survey)
+hiredonly <- lm(prog~social, data = survey %>% filter(hired))
+withcontrol <- lm(prog ~ social + hired, data = survey)
+export_summs(basic, hiredonly, withcontrol, statistics = c(N = 'nobs'))
+```
+
+---
+
+# Graphically
+
+```{r, echo=FALSE, fig.width=5, fig.height=3.5}
+#Probably try a few times until the raw correlation looks nice and low
+df <- survey %>% 
+  transmute(time="1",
+         X=prog,Y=social,C=hired) %>%
+  group_by(C) %>%
+  mutate(mean_X=mean(X),mean_Y=mean(Y)) %>%
+  ungroup()
+
+#Calculate correlations
+before_cor <- paste("1. Start raw. Correlation between prog and social: ",round(cor(df$X,df$Y),3),sep='')
+after_cor <- paste("7. Cor between prog and social controlling for hired: ",round(cor(df$X-df$mean_X,df$Y-df$mean_Y),3),sep='')
+
+
+
+
+#Add step 2 in which X is demeaned, and 3 in which both X and Y are, and 4 which just changes label
+dffull <- rbind(
+  #Step 1: Raw data only
+  df %>% mutate(mean_X=NA,mean_Y=NA,C=0,time=before_cor),
+  #Step 2: Raw data only
+  df %>% mutate(mean_X=NA,mean_Y=NA,time='2. Separate data by the values of hired.'),
+  #Step 3: Add x-lines
+  df %>% mutate(mean_Y=NA,time='3. Figure out what differences in prog are explained by hired'),
+  #Step 4: X de-meaned 
+  df %>% mutate(X = X - mean_X,mean_X=0,mean_Y=NA,time="4. Remove differences in prog explained by hired"),
+  #Step 5: Remove X lines, add Y
+  df %>% mutate(X = X - mean_X,mean_X=NA,time="5. Figure out what differences in social are explained by hired"),
+  #Step 6: Y de-meaned
+  df %>% mutate(X = X - mean_X,Y = Y - mean_Y,mean_X=NA,mean_Y=0,time="6. Remove differences in social explained by hired"),
+  #Step 7: Raw demeaned data only
+  df %>% mutate(X = X - mean_X,Y = Y - mean_Y,mean_X=NA,mean_Y=NA,time=after_cor))
+
+p <- ggplot(dffull,aes(y=Y,x=X,color=as.factor(C)))+geom_point()+
+  geom_vline(aes(xintercept=mean_X,color=as.factor(C)))+
+  geom_hline(aes(yintercept=mean_Y,color=as.factor(C)))+
+  guides(color=guide_legend(title="Hired"))+
+  scale_color_colorblind()+
+  labs(title = 'Inventing a Correlation by Controlling for hired \n{next_state}',
+       x='Programming Skill',
+       y='Social Skill')+
+  transition_states(time,transition_length=c(1,12,32,12,32,12,12),state_length=c(160,125,100,75,100,75,160),wrap=FALSE)+
+  theme_metro_regtitle() +
+  theme(text = element_text(size = 13)) +
+  ease_aes('sine-in-out')+
+  exit_fade()+enter_fade()
+
+animate(p,nframes=200)
+```
+
+
+---
+
+# Concept Checks
+
+In each case, we're controlling for something we shouldn't. Is this a case of washing out too much variation, post-treatment bias, or collider bias?
+
+- Effect of a wife's eye color on her husband's eye color, controlling for the eye color of their biological child
+- Effect of religious denomination on how often you attend church services, controlling for the specific church someone attends
+- Effect of a new error-reducing accounting system on profits, controlling for the number of accounting errors
+- Effect of a merger on market prices, controlling for the level of market concentration
+- Effect of a state's intellectual property law on how many things an inventor invents, controlling for their hometown
+
+---
+
+# Goodness of Fit
+
+- Let's switch gears a bit and talk about some of the statistical aspects of multivariate regression
+- One is the *goodness of fit*. That is, OLS does as good a job as possible of using $X$ and controls to explain $Y$, but how good a job does it do?
+- If the residuals are really big, then there's a lot of noise in $Y$ we're not explaining!
+- If they're small, then most of what's going on in $Y$ is accounted for
+
+---
+
+# R squared
+
+- R squared is the square of the correlation between $Y$ and our OLS predictions of $Y$
+- It can be roughly thought of as "what proportion of the variance in $Y$ can we explain with the variables in our model?"
+- It's *not* a measure of how good the model is (experiments often have low $R^2$, and $R^2$ doesn't care about whether $\hat{\beta}_1$ is unbiased)
+- It's not even a perfect measure even of predictive power (it doesn't care about predicting out of sample, and is sensitive to irrelevant variables being added)
+- *Never* choose your model based on the $R^2$ being higher
+- It's just a decent diagnostic to get a sense of how much of the variance $Y$ you're predicting, and how much is left over
+
+---
+
+# R squared
+
+- In both, true effect is the same, no endogeneity. Only difference is how much *other, non - $X$ - based* variation there is in $Y$
+
+```{r, dev = 'CairoPNG', fig.width = 6, fig.height = 5}
+df <- tibble(X = runif(200)) %>%
+  mutate(Y = 2*X + 5*rnorm(200),
+         type = 'Low R Squared') %>%
+  bind_rows(tibble(X = runif(200)) %>%
+              mutate(Y = 2*X + 2*rnorm(200),
+                     type = 'High R Squared'))
+ggplot(df, aes(x = X, y = Y)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm') + 
+  facet_wrap('type') + 
+  theme_metro() + 
+  theme(axis.text = element_blank())
+
+```
+
+---
+
+# R squared
+
+- Those same two regressions in a table (note the SEs are different too! Concept check: why is that?)
+
+```{r}
+df <- tibble(X = runif(1000)) %>%
+  mutate(Y = 2*X + 5*rnorm(1000),
+         type = 'Low R Squared') %>%
+  bind_rows(tibble(X = runif(1000)) %>%
+              mutate(Y = 2*X + 2*rnorm(1000),
+                     type = 'High R Squared'))
+high <- lm(Y~X, data = df %>% filter(type =='High R Squared'))
+low <- lm(Y~X, data = df %>% filter(type == 'Low R Squared'))
+export_summs(high, low)
+```
+
+
+---
+
+# F tests
+
+- The $R^2$ reveals what was actually going on with those F-tests we did before
+- An F-test of a regression sees if a regression *predicts more accurately* than a more restricted regression where some of the coefficients are forced to $0$ (or to some other value)
+- In other words, it might take the $R^2$ of each of these two models and calculate something from them that has a F distribution (remember, F distribution is the ratio of squared sums of normals!) to test if $\hat{\beta}_2$ and $\hat{\beta}_3$ are both zero at the same time
+- The top model *must* have a higher $R^2$, but is it higher *than you'd expect by random chance?*
+
+$$ Y = \beta_0 + \beta_1X + \beta_2Z + \beta_3A + \varepsilon $$
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+
+---
+
+# F tests
+
+- By the way, when we did this before with a single variable we were comparing:
+
+$$ Y = \beta_0 + \beta_1X \varepsilon $$
+
+to 
+
+$$ Y = \beta_0 + \varepsilon $$
+
+- It's also common to see an F-statistic at the bottom of a column for a regression table. This is, by convention, testing the full model in that column against the constant-only model. This pretty much always rejects the null and is mostly useless.
+
+---
+
+# F tests
+
+- Let's predict some professor salaries
+
+```{r, echo = TRUE}
+data(Salaries, package = 'carData')
+unrestricted <- lm(salary ~ yrs.since.phd + yrs.service + sex, data = Salaries)
+restricted <- lm(salary ~ yrs.since.phd, data = Salaries)
+
+summary(unrestricted)$r.squared
+summary(restricted)$r.squared
+```
+
+---
+
+# F tests
+
+```{r}
+export_summs(unrestricted, restricted)
+```
+
+---
+
+# F tests
+
+- We basically just take a ratio based on $R^2$ values. On top: additional explanatory power scaled by the number of restrictions (on top), and on bottom the explanatory power left to go scaled by $N$ minus the number of variables
+
+```{r, echo = TRUE}
+r2_unres <- summary(unrestricted)$r.squared
+r2_res <- summary(restricted)$r.squared
+
+((r2_unres - r2_res)/2) / ((1 - r2_unres)/(397 - 4))
+
+library(car)
+linearHypothesis(unrestricted, c('yrs.service = 0','sexMale = 0'))$F
+```
+
+---
+
+# F tests
+
+- Why would we want to do this?
+- We might want to see if a *set of variables* has explanatory power: for example, does adding a bunch of background variables improve prediction?
+- If those variables overlap a lot, then each individual one might be insignificant but the group could be important
+- Also, we might want to know if two coefficients are not just nonzero, but *equal to each other*
+- "Does this variable have a similarly-sized effect to this other variable?"
+
+---
+
+# F tests
+
+- Do `yrs.since.phd` and `yrs.service` have the same effect but of opposite signs? No!
+
+```{r, echo = TRUE}
+linearHypothesis(unrestricted, 'yrs.since.phd = -yrs.service')
+```
+
+---
+
+# Concept Checks
+
+- In a sentence, describe what $R^2$ measures
+- Give two reasons why you shouldn't pick one model over another just based on its $R^2$ value
+- Finish the sentence: "The F-statistic shows whether the difference between $R^2$ in an unrestricted model and a restricted model is bigger than..."
+- What does it mean to say that two coefficients are "zero at the same time"?
+
+---
+
+# Multivariate OLS in R
+
+- Conveniently, adding more variables to an OLS model in R is just an issue of... literally adding them
+
+```{r, echo = TRUE}
+model <- lm(salary ~ yrs.since.phd + yrs.service + sex, data = Salaries)
+```
+
+---
+
+# Multivariate OLS in R
+
+What else might we want to know?
+
+- How to get the $R^2$
+- How to do an F test
+- How to look at residuals and control for something by hand
+
+---
+
+# Getting R squared
+
+- Well, we can just see it at the bottom of the default `export_summs()` table, that works
+- We can also pull it out from the `summary()` of a model
+
+```{r, echo = TRUE}
+summary(model)$r.squared
+```
+
+---
+
+# Doing an F test
+
+- We already did one by hand! using the $R^2$ values
+- How about using `linearHypothesis()`?
+- After the model, specify the set restrictions you want in a vector `c('a = 1', 'b = 0', 'c = d')`, etc., referring to the coefficients you want to restrict by their variable names. It will test them all *jointly*
+- Check the `export_summs()` table if you're not sure what the variable names are exactly
+- Don't forget to use `white.adjust = TRUE` if you have heteroskedasticity
+
+```{r, echo = TRUE, eval = FALSE}
+linearHypothesis(model, c('yrs.since.phd = 0'))
+linearHypothesis(model, c('yrs.since.phd = -yrs.service'))
+linearHypothesis(model, c('yrs.since.phd = 0', 'sexMale = 0'), white.adjust = TRUE)
+
+```
+
+---
+
+# Predictions and Residuals
+
+- We can get a vector of predictions from a regression object with `predict()`
+- And a vector of residuals with `resid()`
+- This turns out to be handy often in applied work! For example, maybe we want to plot those predicted values or residuals!
+- Although for what we've covered so far it's mostly just good for doing $R^2$ or controlling by hand.
+- Which can be good to get a feel for how this all works. Or just to learn how to use `predict()` and `resid()`
+
+---
+
+# Controlling by hand
+
+```{r, echo = TRUE}
+export_summs(model)
+```
+
+---
+
+# Controlling by hand
+
+```{r, echo = TRUE}
+yrs_model <- lm(yrs.since.phd ~ yrs.service + sex, data = Salaries)
+yrs_resid <- yrs_model %>% resid()
+salary_model <- lm(salary ~ yrs.service + sex, data = Salaries)
+salary_resid <- salary_model %>% resid()
+
+resid_model <- lm(salary_resid ~ yrs_resid)
+resid_model
+```
+
+---
+
+# Plotting Residuals
+
+Plotting residuals from the full model against $X$ is a good way to check for heteroskedasticity (or anything else super strange)
+
+```{r}
+ggplot(data = Salaries, aes(x = yrs.service, y = resid(model))) + 
+  geom_point() + 
+  geom_hline(aes(yintercept = 0)) + 
+  labs(x = 'yrs.service', y = 'Residual') + 
+  theme_metro_regtitle()
+```
+
+---
+
+# R squared by hand
+
+```{r, echo = TRUE}
+summary(model)$r.squared
+
+
+predicted_values <- predict(model)
+cor(predicted_values,Salaries$salary)^2
+```
+
+---
+
+# Swirl
+
+Let's do the Multivariate Regression Swirl!
