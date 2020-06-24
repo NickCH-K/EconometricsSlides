@@ -24,3 +24,5 @@ Slides can be seen on GitHub Pages at:
 # Week 4
 
 [Controls](https://nickch-k.github.io/EconometricsSlides/Week_04/Week_04_Slides_1_Controls.html)
+
+[Multivariate Regression](https://nickch-k.github.io/EconometricsSlides/Week_04/Week_04_Slides_2_Multivariate_Regression.html)
