@@ -26,3 +26,9 @@ Slides can be seen on GitHub Pages at:
 [Controls](https://nickch-k.github.io/EconometricsSlides/Week_04/Week_04_Slides_1_Controls.html)
 
 [Multivariate Regression](https://nickch-k.github.io/EconometricsSlides/Week_04/Week_04_Slides_2_Multivariate_Regression.html)
+
+# Week 5
+
+[Binary Variables and Functional Form](https://nickch-k.github.io/EconometricsSlides/Week_05/Week_05_1_Binary_Variables_and_Interactions.html)
+
+[Functional Form Practice and Midterm Prep](https://nickch-k.github.io/EconometricsSlides/Week_05/Week_05_2_Functional_Form_Practice_and_Midterm_Prep.html)
