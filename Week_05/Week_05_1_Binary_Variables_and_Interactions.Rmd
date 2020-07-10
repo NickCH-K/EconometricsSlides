@@ -1,0 +1,692 @@
+---
+title: "Binary Variables and Functional Form"
+subtitle: "i.e. what you actually do most of the time"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(dagitty)
+library(ggdag)
+library(jtools)
+library(scales)
+library(Cairo)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_void_metro <- function(x) {
+  theme_void() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Check-in
+
+- Where are we at?
+- Next week we have a midterm. The format will be very similar to the homeworks - multiple choice, some short answers, a little programming
+- It will cover everything up through the day of the midterm
+- This lecture will cover the last "new" material before the midterm
+- This is a pretty packed lecture, but it's structured to be easy to come back to and review, there will be plenty of practice next time, and this might end up broken across both days
+- The latter half of this week will just be practice, especially for this material but also for stuff we've done
+
+---
+
+# The Right Hand Side
+
+- Today we'll be focusing on the *right hand side* of a regression
+- Economists generally refer to a regression as having a "left-hand-side" of the dependent variable $Y$, and a "right-hand-side" of all the independent stuff, like $\beta_0 + \beta_1X + \beta_2Z + \varepsilon$.
+- So far, we've just tossed stuff on the right-hand side and called it our treatment variable or a control variable without thinking too much harder about it
+- Today we will think harder about it!
+
+---
+
+# The Right Hand Side
+
+We will look at three features of the right-hand side
+
+- What if the variable is *categorical* or *binary*? (binary variables)
+- What if the variable has a *nonlinear effect* on $Y$ (polynomials and logarithms)
+- What if the effect of one variable *depends on the value of another variable?* (interaction terms)
+
+---
+
+# Binary Data
+
+- A variable is binary if it only has two values - 0 or 1 (or "No" or "Yes", etc.)
+- Binary variable are super common in econometrics!
+- Did you get the treatment? Yes / No
+- Do you live in the US? Yes / No
+- Is a floating exchange rate in effect? Yes / No
+
+---
+
+# Comparison of Means
+
+- When a binary variable is an independent variable, what we are often interested in doing is *comparing means*
+- Is mean income higher inside the US or outside?
+- Is mean height higher for kids who got a nutrition supplement or those who didn't?
+- Is mean GDP growth higher with or without a floating exchange rate?
+
+---
+
+# Comparison of Means
+
+- Let's compare log earnings in 1993 between married people 30 or older vs. never-married people 30 or older
+
+```{r, echo = TRUE}
+data(PSID, package = 'Ecdat')
+PSID <- PSID %>%
+  filter(age >= 30, married %in% c('married','never married'), earnings > 0) %>%
+  mutate(married  = married == 'married')
+PSID %>%
+  group_by(married) %>%
+  summarize(log_earnings = mean(log(earnings)))
+```
+
+---
+
+
+# Comparison of Means
+
+- Seems to be a slight favor to the married men
+
+```{r}
+PSID %>%
+  group_by(married) %>%
+  mutate(mean_earnings = exp(mean(log(earnings), na.rm = TRUE))) %>%
+ggplot(aes(x = married, y = earnings)) + 
+  geom_jitter() + 
+  scale_x_discrete(labels = c('Not Married', 'Married')) + 
+  scale_y_log10(labels = scales::dollar) + 
+  labs(x = "Marital Status", y = "Log Labor Income") + 
+  geom_point(aes(x = married, y = mean_earnings), size = 6, color = 'red') + 
+  geom_segment(aes(x = FALSE, y = PSID %>% filter(!married) %>% pull(earnings) %>% log() %>% mean() %>% exp(),
+                   xend = TRUE, yend = PSID %>% filter(married) %>% pull(earnings) %>% log() %>% mean() %>% exp()), size = 2, color = 'red') + 
+  theme_metro_regtitle()
+```
+
+---
+
+# Comparison of Means
+
+- The *difference between the means* follows a t-distribution under the null that they're identical
+- So of course we can do a hypothesis test of whether they're different
+
+```{r, echo = TRUE}
+t.test(log(earnings) ~ married, data = PSID, var.equal = TRUE)
+```
+
+---
+
+# Comparison of Means
+
+- But why bother trotting out a specific test when we can just do a regression?
+- (In fact, a lot of specific tests can be replaced with basic regression, see [this explainer](https://lindeloev.github.io/tests-as-linear/))
+
+```{r, echo = TRUE}
+lm(log(earnings) ~ married, data = PSID) %>%
+  export_summs(error_format = 't = {statistic}, p = {p.value}', digits = 5)
+```
+
+---
+
+
+# Comparison of Means
+
+Notice:
+
+- The intercept gives the mean for the *non-married* group
+- The coefficient on *marriedTRUE* gives the married minus non-married difference
+- The t-stat and p-value on that coefficient are exactly the same as that `t.test` (except the t is reversed; same deal)
+- i.e. *the coefficient on a binary variable in a regression gives the difference in means*
+- If we'd defined it the other way, with "not married" as the independent variable, the intercept would be the mean for the *married* group (i.e. "not married = 0"), and the coefficient would be the exact same but times $-1$ (same difference, just opposite direction!)
+
+
+---
+
+# Comparison of Means
+
+Why does OLS give us a comparison of means when you give it a binary variable?
+
+- The only $X$ values are 0 (FALSE) and 1 (TRUE)
+- Because of this, OLS no longer really fits a *line*, it's more of two separate means
+- And when you're estimating to minimize the sum of squared errors separately for each group, can't do any better than to predict the mean!
+- So you get the mean of each group as each group's prediction
+
+
+---
+
+# Binary with Controls
+
+- Obviously this is handy for including binary controls, but why do this for binary treatments? Because we can add controls!
+
+```{r}
+PSID <- filter(PSID, kids < 98)
+lm(log(earnings) ~ married + kids + age , data = PSID) %>%
+  export_summs()
+```
+
+---
+
+# Multicollinearity
+
+- Why is just one side of it on the regression? Why aren't "married" and "not married" BOTH included?
+- Because regression couldn't give an answer!
+- Mean of married is $9.47$ and of non-married is $9.26$. 
+
+$$ \log(Earnings) = 0 + 9.47Married + 9.26NonMarried $$
+$$ \log(Earnings) = 9.26 + .21Married + 0NonMarried $$
+$$ \log(Earnings) = 3 + 6.47Married + 6.26NonMarried $$
+
+- These (and infinitely many other options) all give the exact same predictions! OLS can't pick between them. There's no single best way to minimize squared residuals
+- So we pick one with convenient properties, setting one of the categories to have a coefficient of 0 (dropping it) and making the coefficient on the other *the difference relative to* the one we left out
+
+---
+
+# More than Two Categories
+
+- That interpretation - dropping one and making the other relative to *that*, conveniently extends to *multi-category variables*
+- Why stop at binary categorical variables? There are plenty of categorical variables with more than two values
+- What is your education level? What is your religious denomination? What continent are you on?
+- We can put these in a regression by turning *each value* into its own binary variable
+- (and then dropping one so the coefficients on the others give you the difference with the omitted one)
+
+---
+
+# More than Two Categories
+
+- Make the mean of group A be 1, of group B be 2, etc.
+
+```{r, echo = TRUE}
+tib <- tibble(group = sample(LETTERS[1:4], 10000, replace = TRUE)) %>%
+  mutate(Y = rnorm(10000) + (group == "A") + 2*(group == "B") + 3*(group == "C") + 4*(group == "D"))
+lm(Y ~ group, data = tib)
+```
+
+---
+
+# More than Two Categories
+
+- By changing the reference group, the coefficients change because they're "different from" a different group!
+- And notice that, as before, the intercept is the mean of the omitted group (although this changes once you add controls; the intercept is the predicted mean when all right-hand-side variables are 0)
+
+```{r, echo = TRUE}
+tib <- tib %>% mutate(group = factor(group, levels = c('B','A','C','D')))
+lm(Y ~ group, data = tib)
+```
+
+---
+
+# More than Two Categories
+
+- Some Interpretations: Controlling for number of kids and age, people with a high school degree have log earnings .324 higher than those without a high school degree (earnings 32.4% higher). BA-holders have earnings 84.8% higher than those without a HS degree
+- Controlling for kids and age, a graduate degree earns (.976 - .848 =) 12.8% more than someone with a BA (`linearHypothesis()` could help!)
+
+```{r}
+PSID <- PSID %>%
+  mutate(education  = case_when(
+    educatn < 12 ~ 'No High School Degree',
+    educatn == 12 ~ 'High School Degree',
+    educatn < 16 ~ 'Some College',
+    educatn == 16 ~ 'Bachelor\'s Degree',
+    TRUE ~ 'Graduate Degree'
+  )) %>%
+  mutate(education = factor(education, levels = c('No High School Degree',
+                                                  'High School Degree',
+                                                  'Some College',
+                                                  'Bachelor\'s Degree',
+                                                  'Graduate Degree')))
+table(PSID$education)
+lm(log(earnings) ~ education + kids + age , data = PSID) 
+```
+
+---
+
+# Concept Checks
+
+- If $X$ is binary, in sentences interpret the coefficients from the estimated OLS equation $Y = 4 + 3X + 2Z$
+- How might a comparison of means come in handy if you wanted to analyze the results of a randomized policy experiment?
+- If you had a data set of people from every continent and added "continent" as a control, how many coefficients would this add to your model?
+- If in that regression you really wanted to compare Europe to Asia specifically, what might you do so that the regression made this easy?
+
+---
+
+# Interpreting OLS
+
+- To think more about the right-hand-side, let's go back to our original interpretation of an OLS coefficient
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+- A one-unit change in $X$ is associated with a $\beta_1$-unit change in $Y$
+- This logic still works with binary variables since "a one-unit change in $X$" means "changing $X$ from No to Yes"
+- We can also think of this as $\partial Y/\partial X = \beta_1$ in calculus terms
+- Notice that this assumes that a one-unit change in $X$ *always has the same effect* on $\beta_1$ no matter what else is going on
+- What if that's not true?
+
+---
+
+# Functional Form
+
+- We talked before about times when a *linear model* like standard OLS might not be sufficient
+- However, as long as those *non*-linearities are on the right hand side, we can fix the problem easily but just having $X$ enter non-linearly! Run it through a *transformation*!
+- The most common transformations by far are *polynomials* and *logarithms*
+
+---
+
+# Functional Form
+
+- Why do this? Because sometimes a straight line is clearly not going to do the trick!
+
+```{r}
+set.seed(500)
+df <- tibble(X = 5*runif(200)) %>%
+  mutate(Y = X - 2*X^2 + 2*rnorm(200))
+ggplot(df, aes(x = X, y = Y)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + 
+  theme_metro() + 
+  annotate(geom = 'text', x = 2.5, y = -20, label = 'Straight Line', color = 'blue', size = 15/.pt)
+
+```
+
+---
+
+# Polynomials
+
+- $\beta_1X$ is a "first order polynomial" - there's one term
+- $\beta_1X + \beta_2X^2$ is a "second order polynomial" or a "quadratic" - two terms (note both included, it's not just $X^2$)
+- $\beta_1X + \beta_2X^2 + \beta_3X^3$ is a third-order or cubic, etc.
+
+What do they do?
+
+- The more polynomial terms, the more flexible the line can be. With enough terms you can mimic *any* shape of relationship
+- Of course, if you just add a whole buncha terms, it gets very noisy, and prediction out-of-sample gets very bad
+- Keep it minimal - quadratics are almost always enough, unless you have reason to believe there's a true more-complex relationship. You can try adding higher-order terms and see if they make a difference
+
+---
+
+# Polynomials
+
+- The true relationship is quadratic
+
+```{r}
+ggplot(df, aes(x = X, y = Y)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + 
+  geom_line(aes(x = X, y = predict(lm(Y~X+I(X^2), data = df))), color = 'red', size = 1) + 
+  theme_metro() + 
+  annotate(geom = 'text', x = 2.5, y = -20, label = 'Straight Line', color = 'blue', size = 15/.pt) + 
+  annotate(geom = 'text', x = 3, y = -9, label = 'Quadratic', color = 'red', size = 15/.pt)
+```
+
+---
+
+# Polynomials
+
+- Higher-order terms don't do anything for us here (because a quadratic is sufficient!)
+
+```{r}
+ggplot(df, aes(x = X, y = Y)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + 
+  geom_line(aes(x = X, y = predict(lm(Y~X+I(X^2), data = df))), color = 'red', size = 1) + 
+  geom_line(aes(x = X, y = predict(lm(Y~X+I(X^2) + I(X^3), data = df))), color = 'purple', size = 1) + 
+  theme_metro() + 
+  annotate(geom = 'text', x = 2.5, y = -20, label = 'Straight Line', color = 'blue', size = 15/.pt) + 
+  annotate(geom = 'text', x = 3, y = -9, label = 'Quadratic', color = 'red', size = 15/.pt) +
+  annotate(geom = 'text', x = 3.5, y = -12, label = 'Cubic', color = 'purple', size = 15/.pt)
+```
+
+---
+
+# Polynomials
+
+- Interpret polynomials using the derivative
+- $\partial Y/\partial X$ will be different depending on the value of $X$ (as it should! Notice in the graph that the slope changes for different values of $X$)
+
+$$ Y = \beta_1X + \beta_2X^2 $$
+$$ \partial Y/\partial X = \beta_1 + 2\beta_2X $$
+
+So at $X = 0$, the effect of a one-unit change in $X$ is $\beta_1$. At $X = 1$, it's $\beta_1 + \beta_2$. At $X = 5$ it's $\beta_1 + 5\beta_2$.
+
+- **IMPORTANT**: when you have a polynomial, *the coefficients on each individual term mean very little on their own*. You have to consider them alongisde the other coefficients from the polynomial! **Never** interpret $\beta_1$ here without thinking about $\beta_2$ alongside. Also, the significance of the individual terms doesn't really matter - consider doing an F-test of all of them at once.
+
+---
+
+# Polynomials in R
+
+- We can add an `I()` function to our regression to do a calculation on a variable before including it. So `I(X^2)` adds a squared term
+- There's also a `poly()` function but avoid it - it does something slightly different
+
+```{r, echo = TRUE, eval = FALSE}
+# Linear
+lm(Y ~ X, data = df)
+# Quadratic
+lm(Y ~ X + I(X^2), data = df)
+# Cubic
+lm(Y ~ X + I(X^2) + I(X^3), data = df)
+```
+
+---
+
+# Concept Check
+
+- What's the effect of a one-unit change in $X$ at $X = 0$, $X = 1$, and $X = 2$ for each of these?
+
+```{r}
+export_summs(lm(Y~X, data = df),
+             lm(Y~X + I(X^2), data = df),
+             lm(Y ~ X + I(X^2) + I(X^3), data = df))
+```
+
+---
+
+# Logarithms
+
+- Another common transformation, both for dependent and independent variables, is to take the logarithm
+- This has the effect of pulling in extreme values from strongly right-skewed data and making linear relationships pop out
+- Income, for example, is almost always used with a logarithm
+- It also gives the coefficients a nice percentage-based interpretation
+
+
+---
+
+# Logarithms
+
+```{r}
+set.seed(500)
+logdf <- tibble(X = 10*runif(200)) %>%
+  mutate(Y = log(X) + .3*rnorm(200))
+ggplot(logdf, aes(x = X, y = Y)) + geom_point() + 
+  theme_metro() + 
+  geom_line(aes(x = X, y = predict(lm(Y~X, data = logdf))), color = 'blue', size = 1) + 
+  geom_line(aes(x = X, y = predict(lm(Y~log(X), data = logdf))), color = 'red', size = 1) + 
+  annotate(geom = 'text', x = 4.1, y = .5, color = 'blue', label = 'Straight Line', size = 15/.pt) + 
+  annotate(geom = 'text', x = 1.5, y = 1.5, color = 'red', label = 'Y regressed on log(X)', size = 15/.pt) 
+  
+```
+
+---
+
+# Or if you prefer...
+
+- Notice the change in axes
+
+```{r}
+ggplot(logdf, aes(x = log(X), y = Y)) + geom_point() + 
+  theme_metro() + 
+  geom_line(aes(x = log(X), y = predict(lm(Y~X, data = logdf))), color = 'blue', size = 1) + 
+  geom_line(aes(x = log(X), y = predict(lm(Y~log(X), data = logdf))), color = 'red', size = 1) + 
+  annotate(geom = 'text', x = 1.25, y = -.25, color = 'blue', label = '"Straight Line" (Y regressed on X)', size = 15/.pt) + 
+  annotate(geom = 'text', x = -.5, y = 1, color = 'red', label = 'Y regressed on log(X)', size = 15/.pt) 
+  
+```
+
+---
+
+# Logarithms
+
+- How can we interpret them?
+- The key is to remember that $\log(X) + a \approx \log((1+a)X)$, meaning that a $a$-unit change in $log(X)$ is similar to a $a\times100%$ change in $X$
+- So, walk through our "one-unit change in the variable" logic from before, but whenever we hit a log, change that into a percentage!
+
+---
+
+# Logarithms
+
+- $Y = \beta_0 + \beta_1\log(X)$ A one-unit change in $\log(X)$, or a 100% change in $X$, is associated with a $\beta_1$-unit change in $Y$
+- $\log(Y) = \beta_0 + \beta_1X$ a one-unit change in $X$ is associated with a $\beta_1\times 100$% change in $Y$
+- $\log(Y) = \beta_0 + \beta_1\log(X)$ A one-unit change in $\log(X)$, or a or a 100% change in $X$, is associated with a $\beta_1$-unit change in $\log(Y)$, or a $\beta_1\times100$% change in $Y$.
+- (Try also with changes smaller than one unit - that's usually more reasonable)
+
+---
+
+# Logarithms
+
+Downsides:
+
+- Logarithms require that all data be positive. No negatives or zeroes!
+- Fairly rare that a variable with negative values wants a log anyway
+- But zeroes are common! A common practice is to just do $log(X+1)$ but this is pretty arbitrary
+- Better is the "inverse hyperbolic sine" `asinh()` transform which has a similar percentage interpretation for larger values but also works for 0, although this practice isn't entirely widespread yet
+
+---
+
+# Functional Form
+
+- In general, you want the shape of your function to match the shape of the relationship in the data (or, even better, the true relationship)
+- Polynomials and logs can usually get you there!
+- Which to use? Use logs for highly skewed data or variables with exponential relationships
+- Use polynomials if it doesn't look straight! **Check that scatterplot and see how not-straight it is!**
+
+---
+
+# Concept Checks
+
+- Which of the following variables would you likely want to log before using them? Income, height, wealth, company size, home square footage
+- In each of the following estimated OLS lines, interpret the coefficient by filling in "A [blank] change in X is associated with a [blank] change in Y":
+
+$$ Y = 1 + 2\log(X) $$
+$$ \log(Y) = 3 + 2\log(X) $$
+
+$$ \log(Y) = 4 + 3X $$
+
+---
+
+# Interactions
+
+- For both polynomials and logarithms, the effect of a one-unit change in $X$ differs depending on its current value (for logarithms, a 1-unit change in $X$ is different percentage changes in $X$ depending on current value)
+- But why stop there? Maybe the effect of $X$ differs depending on the current value of *other variables!*
+- Enter interaction terms!
+
+$$ Y = \beta_0 + \beta_1X + \beta_2Z + \beta_3X\times Z + \varepsilon $$
+
+---
+
+# Interactions
+
+- Change in the value of a *control* can shift a regression line up and down
+- Using the model $Y = \beta_0 + \beta_1X + \beta_2Z$, estimated as $Y = .01 + 1.2X + .95Z$:
+
+```{r}
+set.seed(500)
+df <- tibble(X = runif(200), Z = 5*runif(200)) %>%
+  mutate(Y = X + Z + rnorm(200))
+m <- lm(Y~X+Z, data = df)
+mc <- coef(m)[1] %>% unname()
+mx <- coef(m)[2] %>% unname()
+mz <- coef(m)[3] %>% unname()
+ggplot(df, aes(x = X, y = Y)) + 
+  geom_point() +
+  theme_metro() + 
+  scale_x_continuous(limits = c(0,1.1)) +
+  geom_line(aes(x = X, y = mc + mx*X + mz), color = 'red', size = 1) + 
+  geom_line(aes(x = X, y = mc + mx*X + 3*mz), color = 'red', size = 1) + 
+  geom_line(aes(x = X, y = mc + mx*X + 5*mz), color = 'red', size = 1) + 
+  annotate(geom = 'text', x = 1.01, y = mc + mx*1.05 + mz, color = 'red', label = 'Prediction\nat Z = 1', hjust = 0, size = 15/.pt) +
+  annotate(geom = 'text', x = 1.01, y = mc + mx*1.05 + 3*mz, color = 'red', label = 'Prediction\nat Z = 3', hjust = 0, size = 15/.pt) +
+  annotate(geom = 'text', x = 1.01, y = mc + mx*1.05 + 5*mz, color = 'red', label = 'Prediction\nat Z = 5', hjust = 0, size = 15/.pt)
+
+```
+
+---
+
+# Interactions
+
+- But an interaction can both shift the line up and down AND change its slope
+- Using the model $Y = \beta_0 + \beta_1X + \beta_2Z + \beta_3X\times Z$, estimated as $Y = .035 + 1.14X + .94Z + 1.02X\times Z$:
+
+```{r}
+set.seed(500)
+df <- tibble(X = runif(200), Z = 5*runif(200)) %>%
+  mutate(Y = X+Z+X*Z + rnorm(200))
+m <- lm(Y~X*Z, data = df)
+mc <- coef(m)[1] %>% unname()
+mx <- coef(m)[2] %>% unname()
+mz <- coef(m)[3] %>% unname()
+mxz <- coef(m)[4] %>% unname()
+ggplot(df, aes(x = X, y = Y)) + 
+  geom_point() +
+  theme_metro() + 
+  scale_x_continuous(limits = c(0,1.2)) +
+  geom_line(aes(x = X, y = mc + mx*X + mz + mxz*X), color = 'red', size = 1) + 
+  geom_line(aes(x = X, y = mc + mx*X + 3*mz + 3*mxz*X), color = 'red', size = 1) + 
+  geom_line(aes(x = X, y = mc + mx*X + 5*mz + 5*mxz*X), color = 'red', size = 1) + 
+  annotate(geom = 'text', x = 1.01, y = mc + mx*1.05 + mz + mxz*1.05, color = 'red', label = 'Prediction\nat Z = 1', hjust = 0, size = 15/.pt) +
+  annotate(geom = 'text', x = 1.01, y = mc + mx*1.05 + 3*mz  + 3*mxz*1.05, color = 'red', label = 'Prediction\nat Z = 3', hjust = 0, size = 15/.pt) +
+  annotate(geom = 'text', x = 1.01, y = mc + mx*1.05 + 5*mz + 5*mxz*1.05, color = 'red', label = 'Prediction\nat Z = 5', hjust = 0, size = 15/.pt)
+
+```
+
+---
+
+# Interactions
+
+- How can we interpret an interaction?
+- The idea is that the interaction shows how *the effect of one variable changes as the value of the other changes*
+- The derivative helps!
+
+$$ Y = \beta_0 + \beta_1X + \beta_2Z + \beta_3X\times Z $$
+$$ \partial Y/\partial X = \beta_1 + \beta_3 Z $$
+
+- The effect of $X$ is $\beta_1$ when $Z = 0$, or $\beta_1 + \beta_3$ when $Z = 1$, or $\beta_1 + 3\beta_3$ if $Z = 3$!
+
+---
+
+# Interactions
+
+- Often we are doing interactions with binary variables to see how an effect differs across groups
+- In these cases, we combine what we know about binary variables with what we know about interactions!
+- Now, instead of the intercept giving the baseline and the binary coefficient giving the difference, the coefficient on $X$ is the baseline effect of $X$ and the interaction is the difference in the effect of $X$
+- The interaction coefficient becomes "the difference in the effect of $X$ between the $Z$ = "No" and $Z$ = "Yes" groups"
+
+---
+
+# Interactions
+
+- Marriage for those without a college degree raises earnings by 24%. A college degree reduces the marriage premium by 25%. Marriage for those with a college degree reduces earnings by .24 - .25 = -1%
+
+```{r}
+PSID <- PSID %>%
+  mutate(college = educatn >= 16)
+lm(log(earnings) ~ married*college, data = PSID) %>%
+  export_summs()
+```
+
+---
+
+# Notes on Interactions
+
+- Like with polynomials, the coefficients on their own now have little meaning and must be evaluated alongside each other. $\beta_1$ by itself is just "the effect of $X$ when $Z = 0$", not "the effect of $X$"
+- Yes, you *do* almost always want to include both variables in un-interacted form and interacted form. Otherwise the interpretation gets very thorny
+- Interaction effects are *very poorly powered*. You need a *lot* of data to be able to tell whether an effect is different in two groups. If $N$ observations is adequate power to see if the effect itself is different from zero, you need a sample of roughly $16\times N$ to see if the difference in effects is nonzero. Sixteen times!!
+- It's tempting to try interacting your effect with everything to see if it's bigger/smaller/nonzero in some groups, but because it's so poorly powered, this is a bad idea! You'll get a lot of false positives
+
+---
+
+# In R!
+
+- Binary variables in R (on the right-hand-side) you can just treat as normal variables
+- Categorical variables too (although if it's numeric you may need to run it through `factor()` first)
+- You can specify which group gets dropped using `factor()` and setting `levels` in it; the first level will be dropped.
+
+```{r, echo = TRUE, eval = FALSE}
+# drops married = FALSE
+lm(log(earnings) ~ married, data = PSID)
+PSID <- PSID %>%
+  mutate(married = factor(married, levels = c(TRUE, FALSE)))
+# drops married = TRUE
+lm(log(earnings) ~ married, data = PSID)
+```
+
+---
+
+# Binary variables
+
+- You can also use `I()` to specify binary variables in-model, or `case_when()` to create categorical variables
+- `case_when` works in steps - the first one that applies to you, you get, so that `TRUE` at the end catches "everyone else"
+
+```{r, echo = TRUE}
+PSID <- PSID %>%
+  mutate(education  = case_when(
+    educatn < 12 ~ 'No High School Degree',
+    educatn == 12 ~ 'High School Degree',
+    educatn < 16 ~ 'Some College',
+    educatn == 16 ~ 'Bachelor\'s Degree',
+    TRUE ~ 'Graduate Degree'
+  ))
+lm(log(earnings) ~ education + I(kids > 0), data = PSID)  
+```
+
+---
+
+# Polynomials and Logarithms
+
+- As previously discussed, $I()$ will let us do functions like $X^2$
+- We can also do `log()` straight in the regression.
+
+```{r, echo = TRUE, eval = FALSE}
+lm(Y ~ X + I(X^2) + I(X^3), data = df)
+lm(log(Y) ~ log(X), data = df)
+```
+
+---
+
+# Interactions
+
+- `X*Z` will include `X`, `Z`, and also their interaction
+- If necessary, `X:Z` is the interaction only, but you rarely need this. However, it's handy for referring to the interaction term in `linearHypothesis`!
+
+```{r, echo = TRUE, eval = FALSE}
+lm(Y ~ X*Z, data = df)
+lm(Y ~ X + X:Z, data = df)
+```
+
+---
+
+# Tests
+
+- `linearHypothesis()` from **car** can be handy for testing groups of binary variables for a categorical with `matchCoef()`
+- Also good for testing all the polynomial terms, or testing if the effect of $X$ is significant at a certain value of $Z$
+
+```{r, echo = TRUE, eval = FALSE}
+# Is the education effect zero overall?
+m1 <- lm(log(earnings)~education, data = PSID)
+linearHypothesis(m1, matchCoefs(m1, 'education'))
+
+# Does X have any effect?
+m2 <- lm(Y ~ X + I(X^2) + I(X^3), data = df)
+linearHypothesis(m2, c('X = 0', 'I(X^2) = 0', 'I(X^3) = 0'))
+
+# Is the effect of X significant when Z = 5?
+m3 <- lm(Y ~ X*Z, data = df)
+linearHypothesis(m3, 'X + 5*X:Z = 0')
+```
+
