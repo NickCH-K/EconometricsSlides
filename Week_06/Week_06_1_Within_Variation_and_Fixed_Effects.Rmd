@@ -1,0 +1,608 @@
+---
+title: "Within Variation and Fixed Effects"
+subtitle: "i.e. one thing to do when measurement eludes you"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(gganimate)
+library(estimatr)
+library(magick)
+library(wooldridge)
+library(dagitty)
+library(ggdag)
+library(jtools)
+library(scales)
+library(Cairo)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_void_metro <- function(x) {
+  theme_void() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Check-in
+
+- So far we've been learning about how to set up, run, and interpret an ordinary least squares regression
+- This is a key skill for anyone doing anything with data - even if you never run a regular ol' linear regression again, pretty much everything else in applied stats builds off of it in some way
+- Another thing we've been doing is thinking about how to design and add controls to that regression to *identify* our effect of interest by closing back doors
+
+---
+
+# The Measurement Problem...
+
+- And this has led us to some issues that have already popped up!
+- For this approach to work, we need to not only *figure out* what we need to control for, using our diagram, but we need to *actually control for it*
+- A lot of the time we don't have that data!
+- And thus all the skeptical comments we had about the designs we came up with
+
+---
+
+# A Pickle
+
+- So obviously this is a problem, and it's not one we can reason or trick our way out of
+- If we don't have the variable we need to control for, we don't have it
+- ... or do we?
+
+---
+
+# The Rest of the Term
+
+- Much of the rest of the term is going to be focused on *finding ways to control for stuff that we can't measure*
+- Seems impossible! But it is possible, at least in some circumstances
+- Today, we will be talking about *within variation* and *between variation*, and the ability to control for all *between variation* using *fixed effects*
+
+---
+
+# Panel Data
+
+- We are working now in the domain of *panel data*
+- Panel data is when you observe the same individual over multiple time periods
+- "Individual" could be a person, or a company, or a state, or a country, etc. There are $N$ individuals in the panel data
+- "Time period" could be a year, a month, a day, etc.. There are $T$ time periods in the data
+- For now we'll assume we observe each individual the same number of times, i.e. a *balanced* panel (so we have $N\times T$ observations)
+- You can use this stuff with unbalanced panels too, it just gets a little more complex
+
+---
+
+# Panel Data
+
+- Here's what (a few rows from) a panel data set looks like - a variable for individual (county), a variable for time (year), and then the data
+
+```{r, dev = 'CairoPNG'}
+data(crime4)
+crime4 %>%
+  select(county, year, crmrte, prbarr) %>%
+  rename(County = county,
+         Year = year,
+         CrimeRate = crmrte,
+         ProbofArrest = prbarr) %>%
+  slice(1:9) %>%
+  knitr::kable(note = '...') %>%
+  kableExtra::add_footnote('9 rows out of 630. "Prob. of Arrest" is estimated probability of being arrested when you commit a crime')
+```
+
+---
+
+# Between and Within
+
+- Let's pick a few counties and graph this out
+
+```{r, dev = 'CairoPNG'}
+crime4 %>% 
+  filter(county %in% c(1,3,7, 23),
+         prbarr < .5) %>%
+  group_by(county) %>%
+  mutate(label = case_when(
+    crmrte == max(crmrte) ~ paste('County',county),
+    TRUE ~ NA_character_
+  )) %>%
+  ggplot(aes(x =  prbarr, y = crmrte, color = factor(county), label = label)) + 
+  geom_point() + 
+  geom_text(hjust = -.1, size = 14/.pt) + 
+  theme_metro_regtitle() + 
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate',
+       caption = 'One outlier eliminated in County 7.') + 
+  #scale_x_continuous(limits = c(.15, 2.5)) + 
+  guides(color = FALSE, label = FALSE) + 
+  scale_color_manual(values = c('black','blue','red','purple'))
+```
+
+---
+
+# Between and Within
+
+- If we look at the overall variation, just pretending this is all together, we get this
+
+```{r, dev = 'CairoPNG'}
+crime4 %>% 
+  filter(county %in% c(1,3,7, 23),
+         prbarr < .5) %>%
+  group_by(county) %>%
+  mutate(label = case_when(
+    crmrte == max(crmrte) ~ paste('County',county),
+    TRUE ~ NA_character_
+  )) %>%
+  ggplot(aes(x =  prbarr, y = crmrte, color = factor(county), label = label)) + 
+  geom_point() + 
+  geom_text(hjust = -.1, size = 14/.pt) + 
+  theme_metro_regtitle() + 
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate',
+       caption = 'One outlier eliminated in County 7.') + 
+  #scale_x_continuous(limits = c(.15, 2.5)) + 
+  guides(color = FALSE, label = FALSE) + 
+  scale_color_manual(values = c('black','blue','red','purple')) + 
+  geom_smooth(method = 'lm', aes(color = NULL, label = NULL), se = FALSE)
+```
+
+
+---
+
+
+# Between and Within
+
+- BETWEEN variation is what we get if we look at the relationship between the *means of each county*
+
+```{r, dev = 'CairoPNG'}
+crime4 %>% 
+  filter(county %in% c(1,3,7, 23),
+         prbarr < .5) %>%
+  group_by(county) %>%
+  mutate(label = case_when(
+    crmrte == max(crmrte) ~ paste('County',county),
+    TRUE ~ NA_character_
+  ),
+  mcrm = mean(crmrte),
+  mpr = mean(prbarr)) %>%
+  ggplot(aes(x =  prbarr, y = crmrte, color = factor(county), label = label)) + 
+  geom_point() + 
+  geom_text(hjust = -.1, size = 14/.pt) + 
+  theme_metro_regtitle() + 
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate',
+       caption = 'One outlier eliminated in County 7.') + 
+  #scale_x_continuous(limits = c(.15, 2.5)) + 
+  guides(color = FALSE, label = FALSE) + 
+  scale_color_manual(values = c('black','blue','red','purple')) + 
+  geom_point(aes(x = mpr, y = mcrm), size = 20, shape = 3, color = 'darkorange') + 
+  annotate(geom = 'text', x = .3, y = .02, label = 'Means Within Each County', color = 'darkorange', size = 14/.pt)
+```
+
+---
+
+# Between and Within
+
+- And I mean it! Only look at those means! The individual year-to-year variation within county doesn't matter.
+
+```{r, dev = 'CairoPNG'}
+crime4 %>% 
+  filter(county %in% c(1,3,7, 23),
+         prbarr < .5) %>%
+  group_by(county) %>%
+  mutate(label = case_when(
+    crmrte == max(crmrte) ~ paste('County',county),
+    TRUE ~ NA_character_
+  ),
+  mcrm = mean(crmrte),
+  mpr = mean(prbarr)) %>%
+  ggplot(aes(x =  prbarr, y = crmrte, color = factor(county), label = label)) + 
+  #geom_point() + 
+  #geom_text(hjust = -.1, size = 14/.pt) + 
+  theme_metro_regtitle() + 
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate',
+       caption = 'One outlier eliminated in County 7.') + 
+  #scale_x_continuous(limits = c(.15, 2.5)) + 
+  guides(color = FALSE, label = FALSE) + 
+  scale_color_manual(values = c('black','blue','red','purple')) + 
+  geom_point(aes(x = mpr, y = mcrm), size = 20, shape = 3, color = 'darkorange') + 
+  geom_smooth(aes(color = NULL), method = 'lm', se = FALSE)+
+  annotate(geom = 'text', x = .3, y = .02, label = 'OLS Fit on These Four Points', color = 'blue', size = 14/.pt)
+```
+
+---
+
+# Between and Within
+
+- Within variation goes the other way - it treats those orange crosses as their own individualized sets of axes and looks at variation *within* county from year-to-year only!
+- We basically slide the crosses over on top of each other and then analyze *that* data
+
+```{r, echo=FALSE, fig.width=5, fig.height=4.5}
+cranim <- crime4 %>% 
+  filter(county %in% c(1,3,7, 23),
+         prbarr < .5) %>%
+  mutate(allcrm = mean(crmrte),
+         allmpr = mean(prbarr)) %>%
+  group_by(county) %>%
+  mutate(label = case_when(
+    crmrte == max(crmrte) ~ paste('County',county),
+    TRUE ~ NA_character_
+  ),
+  mcrm = mean(crmrte),
+  mpr = mean(prbarr),
+  stage = '1. Raw Data')
+cranim <- cranim %>%
+  bind_rows(cranim %>% 
+              mutate(crmrte = crmrte - mcrm + allcrm,
+                     prbarr = prbarr - mpr + allmpr,
+                     mcrm = allcrm,
+                     mpr = allmpr,
+                     stage = '2. Remove all between variation'))
+
+p <- ggplot(cranim, aes(x =  prbarr, y = crmrte, color = factor(county), label = label)) + 
+  geom_point() + 
+  geom_text(hjust = -.1, size = 14/.pt)  + 
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate',
+       caption = 'One outlier eliminated in County 7.') + 
+  #scale_x_continuous(limits = c(.15, 2.5)) + 
+  guides(color = FALSE, label = FALSE) + 
+  scale_color_manual(values = c('black','blue','red','purple')) + 
+  geom_smooth(aes(color = NULL), method = 'lm', se = FALSE)+
+  geom_point(aes(x = mpr, y = mcrm), size = 20, shape = 3, color = 'darkorange') + 
+  transition_states(stage) + 
+  theme_metro_regtitle()
+
+animate(p, nframes = 80)
+
+```
+
+---
+
+# Between and Within
+
+- We can clearly see that *between counties* there's a strong positive relationship
+- But if you look *within* a given county, the relationship isn't that strong, and actually seems to be negative
+- Which would make sense - if you think your chances of getting arrested are high, that should be a deterrent to crime
+- But what are we actually doing here? Let's think about the causal diagram / data-generating process!
+- What goes into the probability of arrest and the crime rate? Lots of stuff!
+
+---
+
+# The Crime Rate
+
+- "LocalStuff" is just all the things unique to that area
+- "LawAndOrder" is how committed local politicians are to "Law and Order Politics"
+
+```{r, dev = 'CairoPNG'}
+dag <- dagify(CrimeRate ~ ProbArrest + Poverty + CivilRights + LocalStuff,
+              ProbArrest ~ Police + LawAndOrder + CivilRights + Poverty + LocalStuff,
+              Police ~ LawAndOrder,
+              CivilRights ~ LawAndOrder,
+              Poverty ~ LocalStuff,
+              coords=list(
+                x=c(ProbArrest = 1, CrimeRate = 4, Poverty = 2.5, Police = 1.5, LawAndOrder = 1, CivilRights = 2.5, LocalStuff = 4),
+                y=c(ProbArrest = 1, CrimeRate = 1, Poverty = 2, Police = 1.5, LawAndOrder = 2, CivilRights = 1.25, LocalStuff = 2)
+              )) %>% tidy_dagitty()
+ggdag_classic(dag,node_size=10) + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,4.5))
+
+```
+
+
+---
+
+# Between and Within
+
+- For each of these variables we can ask if they vary *between groups* and/or *within groups*
+- LocalStuff is all the stuff unique to that county - geography, landmarks, the quality of the schools, almost by definition this only varies *between groups*. It's not like the things that make your county unique are different each year (or at least not very different)
+- Whether the county has LawAndOrder and how many CivilRights you're allowed might change a bit year to year, but in general, political climates like that change pretty slowly. At a bit of a stretch we can call that something that only varies between groups too
+- Police budgets (and thus number of police on the streets) and Poverty (which varies with the economy) vary both between counties, but also *within* counties from year to year
+- Variables with between variation only (by our assumption): LocalStuff, LawAndOrder, CivilRights
+- Variables with both between and within variation: Police, Poverty
+
+---
+
+# Between and Within
+
+- Let's simplify our graph!
+- Some of the variables only vary *between counties*
+- So, we can replace those variables on the graph with the variable County
+- Right? That's where all the variation is anyway
+
+---
+
+# The Crime Rate
+
+- "LocalStuff" is just all the things unique to that area
+- "LawAndOrder" is how committed local politicians are to "Law and Order Politics"
+
+```{r, dev = 'CairoPNG'}
+dag <- dagify(CrimeRate ~ ProbArrest + Poverty + County,
+              ProbArrest ~ Police + County + Poverty,
+              Police ~ County,
+              Poverty ~ County,
+              coords=list(
+                x=c(ProbArrest = 1, CrimeRate = 4, Poverty = 1, Police = 1.5, County = 3),
+                y=c(ProbArrest = 1, CrimeRate = 1, Poverty = 2, Police = 1.5, County = 2)
+              )) %>% tidy_dagitty()
+ggdag_classic(dag,node_size=10) + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,4.5))
+
+```
+
+---
+
+# Between and Within
+
+- Now the task of identifying ProbArrest $\rightarrow$ CrimeRate becomes much simpler!
+- If we control for County, that will close a lot of back doors for us
+- (based on the diagram, all we need to control for is County and Poverty!)
+- Conveniently, we can control for County just like it was any other variable!
+- And when we do, we automatically *control for all variables that only have between variation*, whatever they are, even if we can't measure them directly or didn't think about them
+- *All that's left is the within variation*
+
+---
+
+# Concept Checks
+
+- For each of these variables, would we expect them to have within variation, between variation, or both?
+- (Individual = person) How a child's height changes as they age.
+- (Individual = person) In a data set tracking many people over many years, the variation in the number of children a person has in a given year.
+- (Individual = city) Overall, Paris, France has more restaurants than Paris, Texas.
+- (Individual = genre) The average pop music album sells more copies than the average jazz album
+- (Individual = genre) Miles Davis' *Kind of Blue* sold very well *for a jazz album*.
+- (Individual = genre) Michael Jackson's *Thriller*, a pop album, sold many more copies than *Kind of Blue*, a jazz album.
+
+---
+
+# Removing Between Variation
+
+- Okay so that's the concept
+- Remove all the between variation so that all that's left is within variation
+- And in the process control for any variables that are made up only of between variation
+- How can we actually do this? And what's really going on?
+- Let's first talk about the regression model itself that this implies
+- Then let's actually do the thing. There are two main ways: *de-meaning* and *binary variables* (they give the same result, for balanced panels anyway)
+
+---
+
+
+# The Model
+
+
+The $it$ subscript says this variable varies over individual $i$ and time $t$
+
+$$Y_{it} = \beta_0 + \beta_1 X_{it} + \varepsilon_{it}$$
+
+- What if there are individual-level components in the error term causing omitted variable bias? 
+- $X_{it}$ is related to LocalStuff which is not in the model and thus in the error term!
+- Regular ol' omitted variable bias. If we don't adjust for the individual effect, we get a biased $\hat{\beta}_1$ 
+- (this bias is called "pooling bias" although it's really just a form of omitted variable bias)
+- We really have this then:
+
+$$Y_{it} = \beta_0 + \beta_1 X_{it} + (\alpha_i + \varepsilon_{it}$$
+
+---
+
+# De-meaning
+
+- Let's do de-meaning first, since it's most closely and obviously related to the "removing between variation" explanation we've been going for
+- The process here is simple!
+
+1. For each variable $X_{it}$, $Y_{it}$, etc., get the mean value of that variable for each individual $\bar{X}_i, \bar{Y}_i$
+2. Subtract out that mean to get residuals $(X_{it} - \bar{X}_i), (Y_{it} - \bar{Y}_i)$
+3. Work with those residuals
+
+- That's it!
+
+---
+
+# How does this work?
+
+- That $\alpha_i$ term gets absorbed
+- The residuals are, by construction, no longer related to the $\alpha_i$, so it no longer goes in the residuals!
+
+$$(Y_{it} - \bar{Y}_i) = \beta_0 + \beta_1(X_{it} - \bar{X}_i) + \varepsilon_{it}$$
+
+---
+
+# Let's do it!
+
+- We can use `group_by` to get means-within-groups and subtract them out
+
+```{r, echo = TRUE}
+data(crime4, package = 'wooldridge')
+crime4 <- crime4 %>%
+  # Filter to the data points from our graph
+  filter(county %in% c(1,3,7, 23),
+         prbarr < .5) %>%
+  group_by(county) %>%
+  mutate(mean_crime = mean(crmrte),
+         mean_prob = mean(prbarr)) %>%
+  mutate(demeaned_crime = crmrte - mean_crime,
+         demeaned_prob = prbarr - mean_prob)
+```
+
+---
+
+# And Regress!
+
+```{r, echo = TRUE}
+orig_data <- lm(crmrte ~ prbarr, data = crime4)
+de_mean <- lm(demeaned_crime ~ demeaned_prob, data = crime4)
+export_summs(orig_data, de_mean)
+```
+
+---
+
+# Interpreting a Within Relationship
+
+- How can we interpret that slope of `-0.03`?
+- This is all *within variation* so our interpretation must be *within-county*
+- So, "comparing a county in year A where its arrest probability is 1 (100 percentage points) higher than it is in year B, we expect the number of crimes per person to drop by .03"
+- Or if we think we've causally identified it (and want to work on a more realistic scale), "raising the arrest probability by 1 percentage point in a county reduces the number of crimes per person in that county by .0003".
+- We're basically "controlling for county" (and will do that explicitly in a moment)
+- So your interpretation should think of it in that way - *holding county constant* i.e. *comparing two observations with the same value of county* i.e. *comparing a county to itself at a different point in time*
+
+---
+
+# Concept Checks
+
+- Why does subtracting the within-individual mean of each variable "control for individual"?
+- In a sentence, interpret the slope coefficient in the estimated model $(Y_{it} - \bar{Y}_i) = 2 + 3(X_{it} - \bar{X}_i)$ where $Y$ is "blood pressure", $X$ is "stress at work", and $i$ is an individual person
+- Why do we want to subtract the mean from $X$ as well as $Y$? Doesn't it come out of the error if we take it out of $Y$ anyway? [Hint: the animation may give some intuition here]
+
+---
+
+# The Least Squares Dummy Variable Approach
+
+- De-meaning the data isn't the only way to do it!
+- (And sometimes it can make the standard errors wonky, since they don't recognize that you've estimated those means)
+- You can also use the least squares dummy variable (another word for "binary variable") method
+- We just treat "individual" like the categorical variable it is and add it as a control!
+- (Interpretation is the same, too... hey, maybe this helps us go back and interpret regressions with categorical variables in them better, too!)
+
+---
+
+# Let's do it!
+
+```{r, echo = TRUE}
+lsdv <- lm(crmrte ~ prbarr + factor(county), data = crime4)
+export_summs(orig_data, de_mean, lsdv, coefs = c('prbarr', 'demeaned_prob'))
+```
+
+---
+
+# The same!
+
+- The result is the same, as it should be
+- Except for that $R^2$ - why is it so much higher for LSDV?
+- Because de-meaning takes out the part explained by the fixed effects ( $\alpha_i$ ) *before* running the regression, while LSDV does it *in* the regression
+- So the .94 is the portion of `crmrte` explained by `prbarr` *and* `county`, whereas the .21 is the "within-$R^2$" - the portion of *the within variation* that's explained by `prbarr`
+- Neither is wrong (and the .94 isn't "better"), they're just measuring different things
+
+---
+
+# Why LSDV?
+
+- A benefit of the LSDV approach is that it calculates the fixed effects $\alpha_i$ for you
+- We left those out of the table with the `coefs` argument of `export_summs` (we rarely want them) but here they are:
+
+```{r}
+lsdv
+```
+
+- Interpretation is exactly the same as with a categorical variable - we have an omitted county, and these show the difference relative to that omitted county
+
+---
+
+# Why LSDV?
+
+- This also makes clear another element of what's happening! Just like with a categorical var, the line is moving *up and down* to meet the counties
+- Graphically, de-meaning moves all the points together in the middle to draw a line, while LSDV moves the line up and down to meet the points
+
+```{r, dev = 'CairoPNG'}
+crime4 %>%
+  ungroup() %>%
+  mutate(pred = predict(lsdv)) %>%
+  group_by(county) %>%
+  mutate(label = case_when(
+    crmrte == max(crmrte) ~ paste('County',county),
+    TRUE ~ NA_character_
+  )) %>%
+  ggplot(aes(x =  prbarr, y = crmrte, color = factor(county), label = label)) + 
+  geom_point() + 
+  geom_text(hjust = -.1, size = 14/.pt) + 
+  geom_line(aes(y = pred, group = county), color = 'blue') +
+  theme_metro_regtitle() + 
+  labs(x = 'Probability of Arrest', 
+       y = 'Crime Rate',
+       caption = 'One outlier eliminated in County 7.') + 
+  #scale_x_continuous(limits = c(.15, 2.5)) + 
+  guides(color = FALSE, label = FALSE) + 
+  scale_color_manual(values = c('black','blue','red','purple'))
+```
+
+---
+
+# Why Not LSDV?
+
+- LSDV is computationally expensive
+- If there are a lot of individuals, or big data, or if you have many sets of fixed effects (yes you can do more than just individual - we'll get to that next time!), it can be very slow
+- Most professionally made fixed-effects commands use de-meaning, but then adjust the standard errors properly
+- (They also leave the fixed effects coefficients off the regression table by default)
+
+---
+
+# Going Professional
+
+- Applied researchers rarely do either of these, and rather will use a command specifically designed for fixed effects
+- In R, there are three big ones: `fixest` in **fixest**, `felm` in **lfe**, or `lm_robust` in **estimatr**
+- `lm_robust` is actually the *slowest* of these, but it is the easiest to use, so we'll go with that
+- Plus, it does robust SEs by default! Which is good, we usually do want them
+- (it does put a bunch of extra calculations in our `export_summs` table but we can get rid of those with `statistics=`)
+
+---
+
+# Going Professional
+
+```{r, echo = TRUE}
+# If necessary, install.packages('estimatr')
+library(estimatr)
+pro <- lm_robust(crmrte ~ prbarr, data = crime4, fixed_effects = ~county)
+export_summs(de_mean, pro, statistics = c(N = 'nobs', R2 = 'r.squared'))
+```
+
+---
+
+# Limits to Fixed Effects
+
+- Okay! At this point we have the concept behind fixed effects, can execute them, and know what they're good for
+- What aren't they good for?
+
+1. They don't control for anything that has within variation
+2. They control away *everything* that's between-only, so we can't see the effect of anything that's between-only ("effect of geography on crime rate?" Nope!)
+3. Anything with only a *little* within variation will have most of its variation washed out too ("effect of population density on crime rate?" probably not)
+4. The estimate pays the most attention to individuals with *lots of variation in treatment*
+
+- 2 and 3 can be addressed by using "random effects" instead but we aren't covering that in this class
+
+---
+
+# Concept Checks
+
+- Why can't we use individual-person fixed effects to study the impact of race on traffic stops?
+- The $R^2$ from a de-meaned fixed effects regression is .3, and from a LSDV regression is .5. Interpret these two numbers in sentences
+- In a sentence, interpret the slope coefficient in the estimated model $(Y_{it} - \bar{Y}_i) = 1 + .5(X_{it} - \bar{X}_i)$ where $Y$ is "school funding per child" and $X$ is "log population growth", and $i$ is city
+
+---
+
+# Swirl
+
+- Open up the Fixed Effects Swirl and let's do it!
+

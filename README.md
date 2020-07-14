@@ -32,3 +32,7 @@ Slides can be seen on GitHub Pages at:
 [Binary Variables and Functional Form](https://nickch-k.github.io/EconometricsSlides/Week_05/Week_05_1_Binary_Variables_and_Interactions.html)
 
 [Functional Form Practice and Midterm Prep](https://nickch-k.github.io/EconometricsSlides/Week_05/Week_05_2_Functional_Form_Practice_and_Midterm_Prep.html)
+
+# Week 6
+
+[Fixed Effects](https://nickch-k.github.io/EconometricsSlides/Week_06/Week_06_1_Within_Variation_and_Fixed_Effects.html)
