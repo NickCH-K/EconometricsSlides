@@ -82,9 +82,11 @@ theme_metro_regtitle <- function(x) {
 - Our textbook is Bailey's Real Econometrics. Read Chapters 1 and 2 this week!
 - Also these slides
 - Programming in R: free, you will want to have access to it. We will get to this next time
-- Assignments: Weekly homework combining Bailey and R tasks (40%)
-- There is a midterm and a final (15%/20%)
-- And a data analysis project (25%)
+- Assignments: Weekly homework combining Bailey and R tasks
+- There is a midterm and a final
+- A data exploration project
+- A group data analysis project
+- And completion of Swirl modules and online discussion
 
 ---
 
