@@ -1,0 +1,531 @@
+---
+title: "Difference in Differences"
+subtitle: "The Most Commonly Applied Research Design in Modern Econometrics"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(gganimate)
+library(estimatr)
+library(magick)
+library(dagitty)
+library(ggthemes)
+library(directlabels)
+library(ggdag)
+library(estimatr)
+library(jtools)
+library(scales)
+library(Cairo)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_void_metro <- function(x) {
+  theme_void() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Check-in
+
+- We're thinking through ways that we can identify the effect of interest without having to control for everything
+- One way is by focusing on *within variation* - if all the endogeneity can be controlled for or only varies between-individuals, we can just focus on within variation to identify it
+- Pro: control for a bunch of stuff
+- Con: washes out a lot of variation! Result can be noisier if there's not much within-variation to work with
+- Also, this requires no endogenous variation over time
+- That might be a tricky assumption! Often there are plenty of back doors that shift over time
+
+---
+
+# Difference-in-Differences
+
+- Today we will talk about difference-in-differences (DID), which is a way of using within variation in a more deliberate way in order to identify the effect we want
+- All we need is a treatment that *goes into effect* at a particular time, and we need a group that is *treated* and a group that is *not*
+- Then, we compare the within-variation for the treated group vs. the within-variation for the untreated group 
+- Voila, we have an effect!
+
+---
+
+# Difference-in-Differences
+
+- Because the requirements to use it are so low, DID is used a *lot*
+- Any time a policy is enacted but isn't enacted everywhere at once? DID!
+- Plus, the logic is pretty straightforward
+- Notice it doesn't even get a full chapter in the textbook? That's not because it's unimportant - it's because it's easy!
+- Here we'll cover the concept, next time some example studies
+
+---
+
+# Difference-in-Differences
+
+- The question DID tries to answer is "what was the effect of (some policy) on the people who were affected by it?"
+- We have some data on the people who were affected both before the policy went into effect and after
+- However, we can't just compare before and after, because we have a back door path - Time! Things change over Time for reasons unrelated to Treatment
+
+```{r, dev = 'CairoPNG', fig.height=4}
+dag <- dagify(Treatment ~ Time,
+              Outcome ~ Treatment + Time,
+              coords=list(
+                x=c(Treatment = 1, Time = 2, Outcome = 3),
+                y=c(Treatment = 1, Time = 2, Outcome = 1)
+              )) %>% tidy_dagitty()
+ggdag_classic(dag,node_size=10) + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,3.5))
+
+```
+
+---
+
+# Difference-in-Differences
+
+- Why not just control for Time? We can certainly measure that and we've controlled for it before!
+- But we can't! It would wash out all the variation!
+- You're either Before and Untreated, or After and Treated. So if you control for Time, you're comparing people with the same values of Time - who must also have the same values of Treatment! So you can't compare Treated and Untreated to get the effect
+
+---
+
+# Difference-in-Differences
+
+- The solution is to bring in a *control group* who is Untreated in both Before and After periods
+- Now the diagram looks like this
+- There's more to control for (we have to control for Group differences too - isolate within variation), but this ALLOWS us to control for Time
+
+```{r, dev = 'CairoPNG'}
+dag <- dagify(Treatment ~ Time + Group,
+              Outcome ~ Treatment + Time + Group,
+              coords=list(
+                x=c(Treatment = 1, Time = 3, Outcome = 3, Group = 1),
+                y=c(Treatment = 2, Time = 2, Outcome = 1, Group = 1)
+              )) %>% tidy_dagitty()
+ggdag_classic(dag,node_size=10) + 
+  theme_void_metro() + 
+  expand_limits(x=c(.5,3.5))
+
+```
+
+
+---
+
+# Difference-in-Difference
+
+- We control for Group by isolating within variation (comparing After to Before)
+- Then we control for Time by comparing those two sources of Within variation
+- We ask *how much more increase* was there in Treatment than control?
+- The Control change is probably the increase you could have expected regardless of Treatment
+- So anything on *top of that* is the effect of Treatment
+- Now we've controlled for Group and Time, identifying the effect!
+
+---
+
+# Example
+
+- Let's say we have a pill that's supposed to make you taller
+- Give it to a kid Adelaide who is 48 inches tall
+- Next year they're 54 inches tall - a six inch increase! But they probably would have grown some anyway without the pill. Surely the pill doesn't make you six inches taller.
+- SO we compare them to their twin Bella, who started at 47 inches but we DON'T give a pill to
+- Next year that twin is 51 inches tall - a four inch increase. So Adelaide probably would have grown about 4 inches without the pill. So the pill boosted her by $(54 - 48) - (51 - 47) = 6 - 4 = 2$ additional inches
+- "Adelaide, who was Treated, grew by two *more inches* than Bella, who was Untreated, did over the same period of time, so the pill made Adelaide grow by two inches"
+- That's DID!
+
+---
+
+# Example
+
+```{r}
+df <- data.frame(Person = c('Adelaide','Adelaide','Bella','Bella'),
+                 Time = factor(c('Before','After','Before','After'), levels = c('Before','After')),
+                 Height = c(48, 54, 47, 51))
+ggplot(df, aes(x = Time, y = Height, group = Person, label = Person)) +
+  geom_line(color = 'black', size = 1) + 
+  geom_point(color = 'red', size = 3) + 
+  geom_dl(method = 'last.bumpup', position = position_nudge(x = .05)) + 
+  theme_metro() + 
+  annotate(geom = 'text', label = 'Before Difference', x = .65, y = 47.5, color = 'red') +
+  annotate(geom = 'text', label = 'After Difference', x = 2.35, y = 52.5, color = 'blue') + 
+  geom_segment(aes(x = 1, y = 47, xend = 1, yend = 48), color = 'red', size = 1.5) + 
+  geom_segment(aes(x = 2, y = 51, xend = 2, yend = 54), color = 'blue', size = 1.5)
+
+```
+
+---
+
+# Example
+
+```{r}
+df <- data.frame(Person = c('Adelaide','Adelaide','Bella','Bella'),
+                 Time = factor(c('Before','After','Before','After'), levels = c('Before','After')),
+                 Height = c(48, 54, 47, 51))
+ggplot(df, aes(x = Time, y = Height, group = Person, label = Person)) +
+  geom_line(color = 'black', size = 1, alpha = .6) + 
+  geom_point(color = 'red', size = 3) + 
+  geom_dl(method = 'last.bumpup', position = position_nudge(x = .05)) + 
+  theme_metro() + 
+  annotate(geom = 'text', label = 'Before Difference', x = .65, y = 47.5, color = 'red') +
+  annotate(geom = 'text', label = 'After Difference', x = 2.35, y = 52.5, color = 'blue') + 
+  annotate(geom = 'text', label = 'Before Difference', x = 1.65, y = 51.5, color = 'red') +
+  annotate(geom = 'text', label = 'Difference-in-Difference', x = 1.6, y = 53, color = 'purple') + 
+  geom_segment(aes(x = 1, y = 47, xend = 1, yend = 48), color = 'red', size = 1.5) + 
+  geom_segment(aes(x = 2, y = 51, xend = 2, yend = 54), color = 'blue', size = 1.5) + 
+  geom_segment(aes(x = 1.9, y = 51, xend = 1.9, yend = 52), color = 'red', size = 1.5) + 
+  geom_segment(aes(x = 1.9, y = 52, xend = 1.9, yend = 54), color = 'purple', size = 1.5)  
+
+```
+
+---
+
+# Difference-in-Differences
+
+What *changes* are included in each value?
+
+- Untreated Before: Untreated Group Mean
+- Untreated After: Untreated Group Mean + Time Effect
+- Treated Before: Treated Group Mean
+- Treated After: Treated Group Mean + Time Effect + Treatment Effect
+- Untreated After - Before = Time Effect
+- Treated After - Before = Time Effect + Treatment Effect
+- DID = (Treated After - Before) - (Untreated After - Before) = Treatment EFfect
+
+---
+
+# Difference-in-Difference
+
+- Of course, this only uses four data points
+- Usually these four points would be four means from lots of observations, not just two people in two time periods
+- How can we do this and get things like standard errors, and perhaps include controls?
+- Why, use OLS of course!
+
+---
+
+# Difference-in-Differences
+
+- We can use what we know about binary variables and interaction terms to get our DID
+
+$$Y_{it} = \beta_0 + \beta_1After_t + \beta_2Treated_i + \beta_3After_tTreated_i + \varepsilon_{it}$$
+where $After_t$ is a binary variable for being in the post-treatment period, and $Treated_t$ is a binary variable for being in the treated group
+
+```{r}
+data.frame(Person = c('Adelaide','Adelaide','Bella','Bella'),
+                 Time = factor(c('Before','After','Before','After'), levels = c('Before','After')),
+                 Height = c(48, 54, 47, 51)) %>%
+  mutate(After = Time == 'After', 
+         Treated = Person == 'Adelaide')
+```
+
+---
+
+# Difference-in-Differences
+
+- How can we interpret this using what we know?
+
+$$Y_{it} = \beta_0 + \beta_1After_t + \beta_2Treated_i + \beta_3After_tTreated_i + \varepsilon_{it}$$
+
+- $\beta_0$ is the prediction when $Treated_i = 0$ and $After_t = 0$ $\rightarrow$ the Untreated Before mean!
+- $\beta_1$ is the *difference between* Before and After for $Treated_i = 0$ $\rightarrow$ Untreated (After - Before)
+- $\beta_2$ is the *difference between* Treated and Untreated for $After_t = 0$ $\rightarrow$ Before (Treated - Untreated)
+- $\beta_3$ is *how much bigger the Before-After difference* is for $Treated_i = 1$ than for $Treated_i = 0$ $\rightarrow$ (Treated After - Before) - (Untreated After - Before) = DID!
+
+---
+
+# Graphically
+
+```{r, dev='CairoPNG', echo=FALSE, fig.width=8,fig.height=7}
+df <- data.frame(Control = c(rep("Control",150),rep("Treatment",150)),
+                 Time=rep(c(rep("Before",75),rep("After",75)),2)) %>%
+  mutate(Y = 2+2*(Control=="Treatment")+1*(Time=="After") + 1.5*(Control=="Treatment")*(Time=="After")+rnorm(300),state="1",
+         xaxisTime = (Time == "Before") + 2*(Time == "After") + (runif(300)-.5)*.95) %>%
+  group_by(Control,Time) %>%
+  mutate(mean_Y=mean(Y)) %>%
+  ungroup()
+
+df$Time <- factor(df$Time,levels=c("Before","After"))
+
+#Create segments
+dfseg <- df %>%
+  group_by(Control,Time) %>%
+  summarize(mean_Y = mean(mean_Y)) %>%
+  ungroup()
+
+diff <- filter(dfseg,Time=='After',Control=='Control')$mean_Y[1] - filter(dfseg,Time=='Before',Control=='Control')$mean_Y[1]
+
+dffull <- rbind(
+  #Step 1: Raw data only
+  df %>% mutate(state='1. Start with raw data.'),
+  #Step 2: Add Y-lines
+  df %>% mutate(state='2. Explain Y using Treatment and After.'),
+  #Step 3: Collapse to means
+  df %>% mutate(Y = mean_Y,state="3. Keep only what's explained by Treatment and After."),
+  #Step 4: Display time effect
+  df %>% mutate(Y = mean_Y,state="4. See how Control changed Before to After."),
+  #Step 5: Shift to remove time effect
+  df %>% mutate(Y = mean_Y 
+                - (Time=='After')*diff,
+                state="5. Remove the Before/After Control difference for both groups."),
+  #Step 6: Raw demeaned data only
+  df %>% mutate(Y = mean_Y 
+                - (Time=='After')*diff,
+                state='6. The remaining Before/After Treatment difference is DID.'))
+
+
+
+p <- ggplot(dffull,aes(y=Y,x=xaxisTime,color=as.factor(Control)))+geom_point()+
+  guides(color=guide_legend(title="Group"))+
+  geom_vline(aes(xintercept=1.5),linetype='dashed')+
+  scale_color_colorblind()+
+  scale_x_continuous(
+    breaks = c(1, 2),
+    label = c("Before Treatment", "After Treatment")
+  )+xlab("Time")+
+  #The four lines for the four means
+  geom_segment(aes(x=ifelse(state %in% c('2. Explain Y using Treatment and After.',"3. Keep only what's explained by Treatment and After."),
+                            .5,NA),
+                   xend=1.5,y=filter(dfseg,Time=='Before',Control=='Control')$mean_Y[1],
+                   yend=filter(dfseg,Time=='Before',Control=='Control')$mean_Y[1]),size=1,color='black')+
+  geom_segment(aes(x=ifelse(state %in% c('2. Explain Y using Treatment and After.',"3. Keep only what's explained by Treatment and After."),
+                            .5,NA),
+                   xend=1.5,y=filter(dfseg,Time=='Before',Control=='Treatment')$mean_Y[1],
+                   yend=filter(dfseg,Time=='Before',Control=='Treatment')$mean_Y[1]),size=1,color="#E69F00")+
+  geom_segment(aes(x=ifelse(state %in% c('2. Explain Y using Treatment and After.',"3. Keep only what's explained by Treatment and After."),
+                            1.5,NA),
+                   xend=2.5,y=filter(dfseg,Time=='After',Control=='Control')$mean_Y[1],
+                   yend=filter(dfseg,Time=='After',Control=='Control')$mean_Y[1]),size=1,color='black')+
+  geom_segment(aes(x=ifelse(state %in% c('2. Explain Y using Treatment and After.',"3. Keep only what's explained by Treatment and After."),
+                            1.5,NA),
+                   xend=2.5,y=filter(dfseg,Time=='After',Control=='Treatment')$mean_Y[1],
+                   yend=filter(dfseg,Time=='After',Control=='Treatment')$mean_Y[1]),size=1,color="#E69F00")+
+  #Line indicating treatment effect
+  geom_segment(aes(x=1.5,xend=1.5,
+                   y=ifelse(state=='6. The remaining Before/After Treatment difference is DID.',
+                            filter(dfseg,Time=='After',Control=='Treatment')$mean_Y[1]-diff,NA),
+                   yend=filter(dfseg,Time=='Before',Control=='Treatment')$mean_Y[1]),size=1.5,color='blue')+
+  #Line indicating pre/post control difference
+  geom_segment(aes(x=1.5,xend=1.5,
+                   y=ifelse(state=="4. See how Control changed Before to After.",
+                            filter(dfseg,Time=='After',Control=='Control')$mean_Y[1],
+                            ifelse(state=="5. Remove the Before/After Control difference for both groups.",
+                                   filter(dfseg,Time=='Before',Control=='Control')$mean_Y[1],NA)),
+                   yend=filter(dfseg,Time=='Before',Control=='Control')$mean_Y[1]),size=1.5,color='blue')+
+  labs(title = 'The Difference-in-Difference Effect of Treatment \n{next_state}')+
+  transition_states(state,transition_length=c(6,16,6,16,6,6),state_length=c(50,22,12,22,12,50),wrap=FALSE)+
+  ease_aes('sine-in-out')+
+  exit_fade()+enter_fade() + 
+  theme_metro_regtitle()
+
+animate(p,nframes=150)
+```
+
+---
+
+# Example
+
+- The Earned Income Tax Credit was increased in 1993. This may increase chances single mothers (treated) return to work, but likely not affect single non-moms (control)
+- Does this program help moms get back to work?
+
+```{r, echo = TRUE}
+df <- read.csv('http://nickchk.com/eitc.csv') %>%
+  mutate(after = year >= 1994,
+         treated = children > 0)
+df %>% 
+  group_by(after, treated) %>%
+  summarize(proportion_working = mean(work))
+```
+
+---
+
+# Example
+
+- We can do it by just comparing the points, like we did with Adelaide and Bella
+- This will give us the DID estimate: The EITC increase increases the probability of working by 4.7 percentage points
+- But not standard errors, or the ability to include controls easily
+
+```{r, echo = TRUE}
+means <- df %>% 
+  group_by(after, treated) %>%
+  summarize(proportion_working = mean(work)) %>%
+  pull(proportion_working)
+(means[4] - means[2]) - (means[3] - means[1])
+```
+
+---
+
+# Let's try OLS! (Interpret all parameters!)
+```{r, echo = TRUE}
+lm(work ~ after*treated, data = df) %>%
+  export_summs(digits = 3)
+```
+
+---
+
+# More!!
+
+- You can recognize $After_t$ and $Treated_i$ as *fixed effects*
+- $Treated_i$ is a fixed effect for group - we only need one coefficient for it since there are only two groups
+- And $After_t$ is a fixed effect for *time* - one coefficient for two time periods
+- You can have more than one set of fixed effects like this! Our interpretation is now within-group *and* within-time
+- (i.e. comparing the within-group variation across groups)
+
+---
+
+# More!!
+
+- We can extend this to having more than two groups, some of which get treated and some of which don't
+- And more than two time periods! Multiple before and/or multiple after
+- We don't have a full set of interaction terms, we still only need the one, which we can now call $CurrentlyTreated_{it}$
+
+---
+
+# More!!
+
+- Let's make some quick example data to show this off, with the first treated period being period 7 and the treated groups being 1 and 9, and a true effect of 3
+
+```{r}
+set.seed(10600)
+```
+
+```{r, echo = TRUE}
+did_data <- tibble(group = sort(rep(1:10, 10)),
+                   time = rep(1:10, 10)) %>%
+  mutate(CurrentlyTreated  = group %in% c(1,9) & time >= 7) %>%
+  mutate(Outcome = group + time + 3*CurrentlyTreated + rnorm(100))
+did_data
+```
+
+---
+
+# More!!
+
+```{r, echo = TRUE}
+lm_robust(Outcome ~ CurrentlyTreated, fixed_effects = ~group + time, data = did_data) %>%
+  export_summs(statistics = c(N = 'nobs'))
+```
+
+
+---
+
+# Downers and Assumptions
+
+- So... does this all work?
+- That example got pretty close to the truth of 3 but who knows in other cases!
+- What needs to be true for this to work?
+
+---
+
+# Does it Work?
+
+- This gives us a causal effect as long as *the only reason the gap changed* was the treatment
+- If Adelaide would have grown six inches *anyway*, then the gap would have grown by 2 pill or not. The pill did nothing in that case! But we don't know that and mistakenly say it helped her grow by 2
+- In fixed effects, we need to assume that there's no uncontrolled endogenous variation across time
+- In DID, we need to assume that there's no uncontrolled endogenous variation *across this particular before/after time change*
+- An easier assumption to justify but still an assumption!
+
+---
+
+# Parallel Trends
+
+- This assumption - that nothing else changes at the same time, is the poorly-named "parallel trends"
+- Again, this assumes that, *if the Treatment hadn't happened to anyone*, the gap between the two would have stayed the same
+- Sometimes people check whether this assumption is plausible by seeing if *prior trends* are the same for Treated and Untreated - if we have multiple pre-treatment periods, was the gap changing a lot during that period?
+- Sometimes people also "adjust for prior trends" to fix parallel trends violations, or use related methods like Synthetic Control (these are outside the scope of this class)
+
+---
+
+# Parallel Trends
+
+- Let's see how that EITC example looks in the leadup to 1994
+- They look like the gap between them is pretty constant before 1994! They move up and down but the *gap* stays the same. That's good.
+
+```{r, echo = FALSE, dev = 'CairoPNG'}
+df %>%
+  mutate(tlabel = factor(treated, labels = c('Untreated','Treated'))) %>%
+  group_by(year, treated, tlabel) %>%
+  summarize(proportion_working = mean(work)) %>%
+  ggplot(aes(x = year, y = proportion_working, color = treated)) + 
+  geom_line(size = 1.5) + 
+  geom_vline(aes(xintercept = 1993.5), linetype = 'dashed') +
+  geom_dl(aes(label = tlabel), method = list('last.bumpup', cex = 1.2)) +
+  theme_metro_regtitle() + 
+  scale_x_continuous(limits = c(1991,1997)) + 
+  scale_y_continuous(labels = function(x) scales::percent(x, accuracy = 1)) +
+  guides(color = FALSE) + 
+  labs(x = "Year", y = 'Proportion Working')
+```
+
+
+---
+
+# Parallel Trends
+
+- Formally, prior trends being the same tells us nothing about parallel trends
+- But it can be suggestive. Going back to the height pill example, what if instead of comparing Adelaide and Bella, child twins, we compared Adelaide to *me*? 
+- Seeing the gap closing *anyway* in previous years would be a pretty good clue that it's not just the pill
+
+```{r}
+df <- data.frame(Person = c('Adelaide','Adelaide','Adelaide','Me','Me','Me'),
+                 Time = factor(c('Before 1','Before 2','After','Before 1','Before 2','After'), levels = c('Before 1','Before 2','After')),
+                 Height = c(43, 48, 54, 67, 67, 67))
+ggplot(df, aes(x = Time, y = Height, group = Person, label = Person)) +
+  geom_line(color = 'black', size = 1) + 
+  geom_point(color = 'red', size = 3) + 
+  geom_dl(method = 'last.bumpup', position = position_nudge(x = .05)) + 
+  theme_metro() +
+  annotate(geom = 'text', x = 1.5, y = 60, hjust = .5, label = 'The gap was already\nclosing before\nany Treatment...') +
+  annotate(geom = 'text', x = 2.5, y = 60, hjust = .5, label = 'telling us that\nnot all of this change\n is just Treatment')
+
+```
+
+---
+
+# Parallel Trends
+
+- Just because *prior trends* are equal doesn't mean that *parallel trends* holds. 
+- *Parallel trends* is about what the before-after change *would have been* - we can't see that!
+- For example, let's say we want to see the effect of online teaching on student test scores, using COVID school shutdowns to get a Before/After
+- As of March/April 2020, some schools had gone online (Treated) and others hadn't (Untreated)
+- Test score trends were probably pretty similar in the Before periods (Jan/Feb 2020), so prior trends are likely the same
+- But LOTS of stuff changed between Jan/Feb and Mar/Apr, like, uh, Coronavirus, lockdowns, etc. not just online teaching! SO *parallel trends* likely wouldn't hold
+
+---
+
+# And a Warning!
+
+- One other note about DID is that its popularity is relatively recent, as things go, so we're still learning a lot about it!
+- Most relevant has to do with *staggered rollout DID*
+- You may have noticed that the OLS version of DID doesn't *necessarily* need to have treatment applied at *one* particular time
+- Say Washington gets treated in 2017, then California in 2018 - we can use these both as Treated groups and just use the same two-way fixed effects, right?
+- Well... that's what we thought for a long time. And you'll see a LOT of published studies doing this. But it turns out to actually bias results by quite a lot
+- There are more complex modern estimators for staggered rollout DID (say, in the **did** package), but they're a bit much to go into for this class
+- For now, stick to DID designs where all the Treated groups are treated in the same period
+
+---
+
+# Swirl
+
+- Enough downers! Let's swirl
+- Let's do the Difference-in-differences swirl

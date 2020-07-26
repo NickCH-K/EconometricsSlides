@@ -1,0 +1,130 @@
+---
+title: "Difference in Difference Studies"
+subtitle: "They actually DID it"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(Cairo)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_void_metro <- function(x) {
+  theme_void() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Check-in
+
+- We're working on difference-in-differences
+- The idea here is that the before-after change for when a policy is enacted has time as a back door
+- In order to control for time, we add a control group that is not treated either before or after
+- By seeing *how much more* the treatment group increased by than the control group, we can see the effect of the policy
+- We can do this with (Treatment Before - After) - (Control Before - After)
+- Or with OLS: $Y = \beta_0 + \beta_1After_t + \beta_2Treatment_i + \beta_3After_tTreatment_i + \varepsilon$
+
+---
+
+# Today
+
+- We will be examining some (short) published studies that use DID
+- We will see how they implement the method and justify their use of it
+- And how they deal with some of the assumptions they need to make
+- And what they find!
+- All three of these papers are available in PDF on the course website
+
+---
+
+# Soda Taxes
+
+- Cawley, Willage, & Frisvold, Journal of the American Medical Association 2017. "Pass-Through of a Tax on Sugar-Sweetened Beverages at the Philadelphia International Aiport"
+- This is a short one - only one page!
+- We are interested in reducing how much sugar people consume, and one way we might do this is by taxing sugar-sweetened beverages, incentivizing people to switch to other drinks
+- But this only has the potential to work if the prices actually rise due to the tax! So does the tax cause prices to rise? (Or do sellers just absorb the extra new cost)
+- They use a "soda tax" implemented in Philadelphia in 2017 and look at soda prices in two parts of the airport - the terminals on the Philadelpha side (subject to tax), and terminals on the Tinicum side (not subject to tax)
+- Read through it, keeping in mind the questions on the next slide
+
+---
+
+# Questions
+
+1. Why do they pick the airport specifically for their study? Why not use the entire counties of Philadelphia and Tinicum? That would be a bigger sample
+2. Why do they limit things further by only looking at a couple of beverages?
+3. What do they find (interpret the results in the table, putting them in a sentence)
+4. How might they have been able to incorporate Diet Coke/Pepsi into their study (diet drinks not subject to the tax)
+5. Do you see any likely flaws in the study?
+6. Is this study believable? Why or why not? What other evidence would we need to see, and what points are they sure to back up?
+
+---
+
+# Bequeathals
+
+- Boserup, Kopczuk, & Kreiner, American Economic Review Papers & Proceedings 2016. "Estate Taxation and the Intergenerational Transmission of Wealth"
+- One obvious source of inequality is inheritance. Rich people pass on their wealth to their kids, maintaining inequality
+- Estate taxes defray this, taking some of that inheritance as tax and using it to pay for governmental services
+- But what *is* the effect of inheritance on inequality?
+- This paper looks at Dutch data and compares people whose parents died in 2010 to similarly-aged people whose parents did not die in 2010, and examines what happened to the wealth distribution
+- Read through it, keeping in mind the questions on the next slide
+
+---
+
+# Questions
+
+1. How are they determining "treatment" and "control" here - there's no actual policy being enacted
+2. Why do they look only at one year in which the parents die?
+3. They're not just looking at mean outcomes here - they're looking at distributions within the groups. Why? Does the logic of DID still work when you do it this way? How can you tell?
+4. What do Figures 1-3 show us? Interpret them in sentences. Does Figure 3 make the analysis look better or worse, and what is being tested here?
+5. What are their findings on the effect of inheritance on relative and absolute inequality? Be specific
+6. Do you see any likely flaws in the study?
+7. Is this study believable? Why or why not? What other evidence would we need to see, and what points are they sure to back up?
+
+---
+
+# Authorized Immigration
+
+- Amuedo-Dorantes and Antman, Economics Letters 2016 "Can authorization reduce poverty among undocumented immigrants? Evidence from the Deferred Action for Childhood Arrivals program"
+- Being a documented migrant has lots of advantages
+- The DACA program provided a certrain kind of documentation to some kinds of previously undocumented immigrants
+- Did it help them? 
+- This paper compares DACA-eligible and ineligible immigrants before and after the passage of DACA and sees whether DACA reduced their poverty rates
+- Read through it with the following questions in mind. We will discuss, but also there will be some questions about this one on the homework!
+
+---
+
+# Questions
+
+1. How do they identify treated and control groups here? Do they make sense?
+2. Would we expect parallel trends to hold for these treated and control groups? Why or why not? What would violating parallel trends mean in this context?
+3. How do they investigate whether parallel trends is likely to hold? Do you think their test makes sense and is convincing? Why or why not?
+4. What do they find? Interpret their results in a sentence with the specific numbers included. Where in the tables does the 38% from the abstract come from?
+5. What does Figure 1 show us? Interpret it in sentences.
+6. Do you see any likely flaws in the study?
+7. Is this study believable? Why or why not? What other evidence would we need to see, and what points are they sure to back up?
