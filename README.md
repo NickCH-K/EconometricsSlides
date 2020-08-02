@@ -36,3 +36,13 @@ Slides can be seen on GitHub Pages at:
 # Week 6
 
 [Fixed Effects](https://nickch-k.github.io/EconometricsSlides/Week_06/Week_06_1_Within_Variation_and_Fixed_Effects.html)
+
+# Week 7
+
+[Difference-in-Difference](https://nickch-k.github.io/EconometricsSlides/Week_07/Week_07_1_Difference_in_Difference.html)
+
+[Difference-in-Difference Studies](https://nickch-k.github.io/EconometricsSlides/Week_07/Week_07_2_Difference_in_Difference_Studies.html) (PDFs of papers in the repo)
+
+# Week 8
+
+[Power Simulations](https://nickch-k.github.io/EconometricsSlides/Week_08/Power_Simulations.html) (not lecture slides)
