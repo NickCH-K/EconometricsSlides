@@ -45,4 +45,8 @@ Slides can be seen on GitHub Pages at:
 
 # Week 8
 
+[The Next Two Weeks](https://nickch-k.github.io/EconometricsSlides/Week_08/Week_08_The_Next_Two_Weeks.html)
+
+[Experiments](https://nickch-k.github.io/EconometricsSlides/Week_08/Week_08_Experiments.html)
+
 [Power Simulations](https://nickch-k.github.io/EconometricsSlides/Week_08/Power_Simulations.html) (not lecture slides)
