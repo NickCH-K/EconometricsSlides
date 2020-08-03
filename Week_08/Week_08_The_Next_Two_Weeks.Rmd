@@ -1,0 +1,115 @@
+---
+title: "The Next Two Weeks"
+subtitle: "It's time to choose..."
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+```
+
+# Check-in
+
+- We've covered a bunch of stuff about regression - how it works, what biases it, how we can control for stuff
+- We've covered stuff about identification and data-generating processes and how that can tell us the kind of analyses to run
+- We've covered within variation, fixed effects, and difference-in-difference, which is one approach to identification when you can't control for everything
+- What's next?
+
+---
+
+# A Big Wide World
+
+- Obviously, there is far too much to econometrics to fit into one course
+- And, if I'm honest, past what we've covered up to here, *different topics are going to be way more or less applicable depending on your future path*
+- (DID might fit into that too, but it's so common, and it's good to cover a general research design like that all together, plus it fits so nicely with within-variation. ANYWAY)
+- So, I'm going to have you choose what material makes the most sense for you.
+
+---
+
+# Four Topics
+
+- For the next two weeks of class, you can pick one of four modules to do. There will be material to cover on your own, and also discussion topics, etc., to come together on.
+- (The final week of class will be our projects. We'll also be working on projects over the next two weeks)
+- For each module there will be a lecture, a Swirl, videos, a homework, etc., as normal
+- Plus a paper to read and comment on
+- Extra credit: do a second module (see syllabus)
+
+---
+
+# Four Topics
+
+The four topics are:
+
+- Randomized Experiments (Bailey Ch. 10)
+- Regression Discontinuity (Bailey Ch. 11)
+- Instrumental Variables (Bailey Ch. 9)
+- Limited Dependent Variables (Bailey Ch. 12)
+- (Time series would be a good option here too, but it's already covered in the other metrics class in the sequence!)
+
+---
+
+# How Can We Pick?
+
+- Check out the related book chapter and see if you like what you see
+- Also let's ask: who is each topic good for?
+
+---
+
+# Randomized Experiments
+
+- Cases where you can explicitly randomize treatment
+- Often makes the regression itself pretty easy!
+- Issues to cover include design, how the randomization is done, how to check if the experiment worked properly
+- Good for: if you plan to be in a position where you could randomize a treatment! A/B testing in tech companies, development economists doing field work, administrative higher-ups testing if new policies work
+- Not so good if: most people are never in a position to actually randomize treatment of anything
+
+---
+
+# Regression Discontinuity
+
+- Cases where treatment is assigned based on cutoffs
+- Test score above X? In gifted-and-talented! We can use this to get effect of gifted and talented. Welfare kicks in below $X-per-year? Use this to get effect of welfare
+- These days, the most trusted and believable form of natural experiment (moreso than DID!)
+- Good for: if you're going into policy evaluation. These cutoffs arise most often in administrative settings like education and government policy (although not always; it's also used for the effects of elections, the effects of daylight savings...)
+- Not so good if: you are in an area where policies are not assigned based on cutoffs
+
+---
+
+# Instrumental Variables
+
+- Cases where treatment is assigned by some real-world variable that's random-ish. Lets you treat observed data like an experiment
+- Vietnam war drafted people in random birthday order. That's very experiment-like! We can get the effect of military service
+- Good for: If you are *very very good* at learning your topic's DGP very well and keeping a sharp eye out for potential instruments. Also, if you are interested in the nuts-and-bolts of econometrics, IV is a very *interesting* topic. Cool mathematical ideas, and secretly underlies both random experiments and regression disconinuity!
+- Not so good if:  IV is fairly rare outside of academia. It also requires some strong assumptions to work, people are often skeptical of IV these days. Situations where you can plausibly use it are hard to find!
+
+
+---
+
+# Limited Dependent Variables
+
+- This one's not about causality or identification at all!
+- We've been using OLS for everything. But OLS assumptions are broken whenever the dependent variable isn't continuous. Often our dependent variable is binary!
+- OLS works okay despite this sometimes, but it's often better to model the form of the dependent variable explicitly. For binary variables that's usually "probit" or "logit"
+- Good for: If you're uninterested in causality and just want to do predictive modeling (data scientists use logit a lot)
+- Not so good if: Less important (although still important) if your main focus is causal effects. This isn't a research design, it's a regression method.
+
+---
+
+# Pick!
+
+- Consider these options and maybe flip through the slides or textbook chapters, and pick one!
+- The materials for your chosen module will be on Canvas
+- Note: these slides are more on the dense side, since they're meant to go through on your own rather than presented. So take some time and sit with them!

@@ -534,7 +534,7 @@ for (i in 1:2000) {
 <p>Our estimate of statistical power is the proportion of the results that are significant:</p>
 <pre class="r"><code>mean(sig_results)</code></pre>
 <pre><code>## [1] 0.09</code></pre>
-<p>So we have statistical power of 9.00%. We might also want to look at the distribution of the coefficient itself. The standard deviation of the coefficient across all the simulated runs gives you a good idea of what the standard error of the coefficient will be (<code>sd(coef_results)</code>, which gives us $_{_1} = $ 0.33).</p>
+<p>So we have statistical power of 9.00%. We might also want to look at the distribution of the coefficient itself. The standard deviation of the coefficient across all the simulated runs gives you a good idea of what the standard error of the coefficient will be (<code>sd(coef_results)</code>, which gives us $_{} = $ 0.33).</p>
 <p>We should probably also check the distribution directly with <code>geom_density()</code> in <strong>ggplot2</strong> to make sure it looks appropriate and there aren’t weird outliers implying a super sensitive analysis. Right now, our coefficient is stored as a <em>vector</em>, not a <code>data.frame</code> or <code>tibble</code>, so we can’t use it with <code>ggplot</code> as we normally would. We either need to put it in the <code>aes()</code> argument, unlike our normal approach to <strong>ggplot2</strong>:</p>
 <pre class="r"><code>ggplot(mapping = aes(coef_results)) + 
   geom_density()</code></pre>
@@ -774,7 +774,7 @@ for (i in 1:500) {
     return()
 }</code></pre>
 <p>How often are we significant here? Running <code>my_power_function(1, 1000)</code> from the original values gives us significance 100% of the time! 100% power. Maybe with an effect so large we dont even need that many observations.</p>
-<p>(although note that this estimate might be biased… we could change this function slightly to store and then return <code>bias_results = coef(m)[2] - effect</code> to see whether the estiamte is on average accurate)</p>
+<p>(although note that this estimate might be biased… we could change this function slightly to store and then return <code>bias_results = coef(m)[2] - effect</code> to see whether the estimate is on average accurate)</p>
 <p>And finally, we can see how big of a sample size we need to get power of 90%.</p>
 <pre class="r"><code>power_levels &lt;- c()
 

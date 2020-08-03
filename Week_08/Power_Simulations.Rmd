@@ -220,7 +220,7 @@ Our estimate of statistical power is the proportion of the results that are sign
 mean(sig_results)
 ```
 
-So we have statistical power of `r scales::percent(mean(sig_results), accuracy = .01)`. We might also want to look at the distribution of the coefficient itself. The standard deviation of the coefficient across all the simulated runs gives you a good idea of what the standard error of the coefficient will be (`sd(coef_results)`, which gives us $\hat{\sigma}_{\beta_1} = $ `r scales::number(sd(coef_results),accuracy = .01)`).
+So we have statistical power of `r scales::percent(mean(sig_results), accuracy = .01)`. We might also want to look at the distribution of the coefficient itself. The standard deviation of the coefficient across all the simulated runs gives you a good idea of what the standard error of the coefficient will be (`sd(coef_results)`, which gives us $\hat{\sigma}_{\beta} = $ `r scales::number(sd(coef_results),accuracy = .01)`).
 
 We should probably also check the distribution directly with `geom_density()` in **ggplot2** to make sure it looks appropriate and there aren't weird outliers implying a super sensitive analysis. Right now, our coefficient is stored as a *vector*, not a `data.frame` or `tibble`, so we can't use it with `ggplot` as we normally would. We either need to put it in the `aes()` argument, unlike our normal approach to **ggplot2**:
 
@@ -506,7 +506,7 @@ my_power_function <- function(effect, sample_size) {
 
 How often are we significant here? Running `my_power_function(1, 1000)` from the original values gives us significance 100% of the time! 100% power. Maybe with an effect so large we dont even need that many observations.
 
-(although note that this estimate might be biased... we could change this function slightly to store and then return `bias_results = coef(m)[2] - effect` to see whether the estiamte is on average accurate)
+(although note that this estimate might be biased... we could change this function slightly to store and then return `bias_results = coef(m)[2] - effect` to see whether the estimate is on average accurate)
 
 And finally, we can see how big of a sample size we need to get power of 90%.
 
