@@ -111,8 +111,8 @@ $$IceCreamEating = \beta_0 + \beta_1ShortsWearing + \beta_2Temperature + \vareps
 - How does this actually work?
 - Controlling for a variable works by *removing variation in $X$ and $Y$ that is explained by the control variable*
 - So our estimate of $\hat{\beta}_1$ is based on *just the variation in $X$ and $Y$ that is unrelated to the control variable
-- Any accidentally-assigning-the-value-of-$Temperature$-to-$ShortsWearing$ can't happen because we've removed the effect of $Temperature$ on $ShortsWearing$ as well as the effect of $Temperature$ on $IceCreamEating$
-- We're asking at that point, *holding $Temperature$ constant*, i.e. *comparing two different days with the same $Temperature*, how is $ShortsWearing$ related to $IceCreamEating$?
+- Any accidentally-assigning-the-value-of-Temperature-to-ShortsWearing can't happen because we've removed the effect of $Temperature$ on $ShortsWearing$ as well as the effect of $Temperature$ on $IceCreamEating$
+- We're asking at that point, *holding $Temperature$ constant*, i.e. *comparing two different days with the same $Temperature$ *, how is $ShortsWearing$ related to $IceCreamEating$?
 - We know we're comparing within the same $Temperature$ because we literally subtracted out all the $Temperature$ differences!
 
 ---
@@ -319,8 +319,8 @@ ggdag_classic(dag,node_size=20) +
 # Drawing a Diagram
 
 - We observe that, in the data, $ShortsWearing$ and $IceCreamEating$ are related. Why?
-- Maybe, we theorize, that wearing shorts causes you to eat ice cream ($ShortsWearing \rightarrow IceCreamEating$)
-- However, there's another explanation/path: $Temperature$ causes both ($ShortsWearing \leftarrow Temperature \rightarrow IceCreamEating$)
+- Maybe, we theorize, that wearing shorts causes you to eat ice cream ( $ShortsWearing \rightarrow IceCreamEating$ )
+- However, there's another explanation/path: $Temperature$ causes both ( $ShortsWearing \leftarrow Temperature \rightarrow IceCreamEating$ )
 - We need to control for temperature to *close this path!*
 - Once it's closed, the only path left is $ShortsWearing \rightarrow IceCreamEating$, so if we *do* see a relationship still in the data, we know we've identified the causal effect
 
