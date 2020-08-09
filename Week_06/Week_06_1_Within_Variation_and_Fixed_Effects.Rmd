@@ -109,7 +109,7 @@ crime4 %>%
          ProbofArrest = prbarr) %>%
   slice(1:9) %>%
   knitr::kable(note = '...') %>%
-  kableExtra::add_footnote('9 rows out of 630. "Prob. of Arrest" is estimated probability of being arrested when you commit a crime')
+  kableExtra::add_footnote('9 rows out of 630. "Prob. of Arrest" is estimated probability of being arrested when you commit a crime', notation = 'none')
 ```
 
 ---
@@ -405,7 +405,7 @@ $$Y_{it} = \beta_0 + \beta_1 X_{it} + \varepsilon_{it}$$
 - (this bias is called "pooling bias" although it's really just a form of omitted variable bias)
 - We really have this then:
 
-$$Y_{it} = \beta_0 + \beta_1 X_{it} + (\alpha_i + \varepsilon_{it}$$
+$$Y_{it} = \beta_0 + \beta_1 X_{it} + (\alpha_i + \varepsilon_{it})$$
 
 ---
 
@@ -503,7 +503,7 @@ export_summs(orig_data, de_mean, lsdv, coefs = c('prbarr', 'demeaned_prob'))
 - The result is the same, as it should be
 - Except for that $R^2$ - why is it so much higher for LSDV?
 - Because de-meaning takes out the part explained by the fixed effects ( $\alpha_i$ ) *before* running the regression, while LSDV does it *in* the regression
-- So the .94 is the portion of `crmrte` explained by `prbarr` *and* `county`, whereas the .21 is the "within-$R^2$" - the portion of *the within variation* that's explained by `prbarr`
+- So the .94 is the portion of `crmrte` explained by `prbarr` *and* `county`, whereas the .21 is the "within - $R^2$ " - the portion of *the within variation* that's explained by `prbarr`
 - Neither is wrong (and the .94 isn't "better"), they're just measuring different things
 
 ---
