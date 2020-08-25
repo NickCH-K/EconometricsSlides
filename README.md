@@ -43,10 +43,16 @@ Slides can be seen on GitHub Pages at:
 
 [Difference-in-Difference Studies](https://nickch-k.github.io/EconometricsSlides/Week_07/Week_07_2_Difference_in_Difference_Studies.html) (PDFs of papers in the repo)
 
-# Week 8
+# Week 8/9
 
 [The Next Two Weeks](https://nickch-k.github.io/EconometricsSlides/Week_08/Week_08_The_Next_Two_Weeks.html)
 
 [Experiments](https://nickch-k.github.io/EconometricsSlides/Week_08/Week_08_Experiments.html)
 
 [Power Simulations](https://nickch-k.github.io/EconometricsSlides/Week_08/Power_Simulations.html) (not lecture slides)
+
+[Regression Discontinuity](https://nickch-k.github.io/EconometricsSlides/Week_08/Week_08_Regression_Discontinuity.html)
+
+[Instrumental Variables](https://nickch-k.github.io/EconometricsSlides/Week_08/Week_08_Instrumental_Variables.html)
+
+[Limited/Binary Dependent Variables](https://nickch-k.github.io/EconometricsSlides/Week_08/Week_08_Limited_Dependent_Variables.html)
