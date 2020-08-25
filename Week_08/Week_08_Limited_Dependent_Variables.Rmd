@@ -1,0 +1,489 @@
+---
+title: "Limited Dependent Variables"
+subtitle: "Is You Is or Is You Ain't"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(estimatr)
+library(dagitty)
+library(ggthemes)
+library(directlabels)
+library(ggdag)
+library(estimatr)
+library(jtools)
+library(scales)
+library(Cairo)
+theme_metro <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_void_metro <- function(x) {
+  theme_void() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+theme_metro_regtitle <- function(x) {
+  theme_minimal() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Check-in
+
+- We've spent a lot of time thinking about *research designs* - what we need to control for, finding natural experiments, etc.
+- We've spent a little less time on *what kinds of statistical methods there are* other than OLS!
+- This leaves out some important stuff!
+- (Statisticians, as opposed to econometricians, might say we've barely done any *statistics* at all!)
+
+---
+
+# OLS and the Dependent Variable
+
+A typical OLS equation looks like:
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+and assumes that the error term, $\varepsilon$, is normal. 
+
+- The normal distribution is continuous and smooth and has infinite range
+- And the linear form stretches off to infinity in either direction as $X$ gets small or big
+- Both of these imply that the dependent variable, $Y$, is continuous and can take any value (why is that?)!
+- If that's not true, then our model will be *misspecified* in some way
+
+---
+
+# Non-Continuous Dependent Variables
+
+When might dependent variables not be continuous and have infinite range?
+
+- Years working at current job (can't be negative)
+- Are you self-employed? (Binary)
+- Number of children (must be a round number, can't be negative)
+- Which brand of soda did you buy? (categorical)
+- Did you recover from your disease? (binary)
+- How satisfied are you with your purchase on a 1-5 scale? (must be a round number from 1 to 5, and the difference between 1 and 2 isn't necessarily the same as the difference between 2 and 3)
+
+---
+
+# Binary Dependent Variables
+
+- In many cases, such as variables that must be round numbers, or can't be negative, even though there are ways of properly handling these issues, people will *usually* ignore the problem and just use OLS, as long as the data is continuous-ish (i.e. doesn't have a LOT of observations right at 0 next to the impossible negative values, or has lots of different values so the round number smooth out)
+- However, the problems of using OLS are a bit worse for binary data, and so they're the most common case in which we do something special to account for it
+- Binary dependent variables are also really common! We're often interested in whether a certain outcome happened or didn't (if we want to know if a drug was effective, we are likely asking if you are cured or not!)
+
+So, how can we deal with having a binary dependent variable, and why do they give OLS such problems?
+
+---
+
+# The Linear Probability Model
+
+- First off, let's ignore the completely unexplained warnings I've just given you and do it with OLS anyway, and see what happens
+- Running OLS with a binary dependent variable is called the "linear probability model" or LPM
+
+$$ D = \beta_0 + \beta_1X + \varepsilon $$
+
+Throughout these slides, let's use $D$ to refer to a binary variable 
+
+---
+
+# The Linear Probability Model
+
+- In terms of *how we do it*, the interpretation is the exact same as regular OLS, so you can bring in all your intuition
+- The only difference is that our interpretation of the dependent variable is now in probability terms
+- If $\hat{\beta}_1 = .03$, that means that a one-unit increase in $X$ is associated with a three percentage point increase in the probability that $D = 1$
+- (percentage points! Not percentage - an increase from .1 to .13, say, not .1 to .103)
+
+---
+
+# The Linear Probability Model
+
+So what's the problem?
+
+The linear probability model can lead to...
+
+- Terrible predictions
+- Incorrect slopes that don't acknowledge the boundaries of the data
+
+---
+
+# Terrible Predictions
+
+- OLS fits a straight line. So if you increase or decrease $X$ enough, eventually you'll predict that the probability of $D = 1$ is bigger than 1, or lower than 0. Impossible!
+- We can address part of this by just not trying to predict outside the range of the data, but if $X$ has a lot of variation in it, we might get those impossible predictions even for values in our data. And what do we do with that?
+- (Also, because errors tend to be small for certain ranges of $X$ and large for others, we *have* to use heteroskedasticity-robust standard errors)
+
+---
+
+# Terrible Predictins
+
+```{r}
+tib <- tibble(X = runif(250)*10) %>%
+  mutate(D = ((X - 8)/6 + rnorm(250)*.5 > 0)*1)
+ggplot(tib, aes(x = X, y = D)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + 
+  theme_metro() + 
+  scale_y_continuous(breaks = c(0,1)) + 
+  annotate(geom = 'text', x = 6.5, y = .6, color = 'blue', label = 'OLS Prediction')
+```
+
+---
+
+# Incorrect Slopes
+
+- Also, OLS requires that the slopes be constant
+- (Not necessarily if you use a polynomial or logarithm, but the following critique still applies)
+- This is *not what we want for binary data!
+- As the prediction gets really close to 0 or 1, the slope should flatten out to nothing
+- If we predict there's a .50 chance of $D = 1$, a one-unit increase in $X$ with $\hat{\beta}_1 = .03$ would increase that to .53
+- If we predict there's a .99 chance of $D = 1$, a one-unit increase in $X$ with $\hat{\beta}_1 = .03$ would increase that to 1.02...
+- Uh oh! The slope *should* be flatter near the edges. We need the slope to vary along the range of $X$
+
+---
+
+# Incorrect Slopes
+
+- We can see how much the OLS slopes are overstating changes in $D$ as $X$ changes near the edges by comparing an OLS fit to just regular ol' local means, with no shape imposed at all
+- We're not forcing the red line to flatten out - it's doing that naturally as the mean can't possibly go any lower! OLS barrels on through though
+
+```{r}
+ggplot(tib, aes(x = X, y = D)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + 
+  geom_smooth(se = FALSE, color = 'red') +
+  theme_metro() + 
+  scale_y_continuous(breaks = c(0,1)) + 
+  annotate(geom = 'text', x = 5, y = .35, color = 'blue', label = 'OLS Prediction') +
+  annotate(geom = 'text', x = 7, y = .25, color = 'red', label = 'Local Means')
+```
+
+---
+
+# Linear Probability Model
+
+So what can we make of the LPM?
+
+- Bad if we want to make predictions
+- Bad at estimating slope if we're looking near the edges of 0 and 1
+- (which means it's especially bad if the average of $D$ is near 0 or 1)
+
+When might we use it anyway?
+
+- It behaves better in small samples than methods estimated by maximum likelihood (which many other methods are)
+- If we only care about slopes far away from the boundaries
+- If alternate methods (like we're about to go into) put too many other statistical demands on the data (OLS is very "easy" from a computational standpoint)
+- If we're using lots of fixed effects (OLS deals with these far more easily than nonlinear methods)
+- If our right-hand side is just binary variables (if X has limited range it might not predict out of 0-1!)
+
+---
+
+# Generalized Linear Models
+
+- So LPM has problems. What can we do instead?
+- Let's introduce the concept of the *Generalized Linear Model*
+
+Here's an OLS equation:
+
+$$ Y = \beta_0 + \beta_1X + \varepsilon $$
+
+Here's a GLM equation:
+
+$$ E(Y | X) = F(\beta_0 + \beta_1X) $$
+
+Where $F()$ is *some function*. 
+
+---
+
+# Generalized Linear Models
+
+$$ E(D | X) = F(\beta_0 + \beta_1X) $$
+
+- We can call the $\beta_0 + \beta_1X$ part, which is the same as in OLS, the *index function*. It's a linear function of our variable $X$ (plus whatever other controls we have in there), same as before
+- But to get our prediction of what $Y$ will be conditional on what $X$ is ( $D|X$ ), we do one additional step of running it through a function $F()$ first. We call this function a *link function* since it links the index function to the outcome
+- If $F(z) = z$, then we're basically back to OLS
+- But if $F()$ is nonlinear, then we can account for all sorts of nonlinear dependent variables!
+
+So in other words, our prediction of $D$ is still based on the linear *index*, but we run it through some nonlinear function first to get our nonlinear output!
+
+---
+
+# Generalized Linear Models
+
+We can also think of this in terms of the *latent variable* interpretation
+
+$$ D^* = \beta_0 + \beta_1X $$
+
+Where $D^*$ is an unseen "latent" variable that can take any value, just like a regular OLS dependent variable (and roughly the same in concept as our index function)
+
+And we convert that latent variable to a proabability using some function
+
+$$ E(D | X) = F(D^*) $$
+
+and perhaps saying something like "if we estimate $Y^*$ is above the number $c$, then we predict $D = 1$ "
+
+
+---
+
+# Probit and Logit
+
+- Let's go back to our index-and-function interpretation. What function should we use?
+- (many many different options depending on your dependent variable - poisson for count data, log link for nonnegative skewed values, multinomial logit for categorical data...)
+- For binary dependent variables the two most common link functions are the probit and logistic links. We often call a regression with a logistic link a "logit regression"
+
+$$ Probit(index) = \Phi(index) $$
+
+where $\Phi()$ is the standard normal cumulative distribution function (i.e. the probability that a random standard normal value is less than or equal to $index$ )
+
+$$ Logistic(index) = \frac{e^{index}}{1+e^{index}} $$
+
+For most purposes it doesn't matter whether you use probit or logit, but logit is getting much more popular recently (due to its common use in data science - it's computationally easier) so we'll focus on that, and just know that pretty much all of this is the same with probit
+
+---
+
+# Logit
+
+- Notice that we can't possibly predict a value outside of 0 or 1, no matter how wild $X$ and our index get
+- As $index$ goes to $-\infty$, 
+
+$$ Logistic(index) \rightarrow  \frac{0}{1+0} = 0 $$
+
+- And as $index$ goes to $\infty$,
+
+$$ Logistic(index) \rightarrow  \frac{\infty}{1+\infty } = 1 $$
+
+---
+
+# Logit
+
+- Also notice that, like the local means did, its slope flattens out near the edges
+
+```{r}
+
+ggplot(tib, aes(x = X, y = D)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE, color = 'blue') + 
+  geom_smooth(method = 'glm', method.args = list(family = binomial(link = 'logit')), 
+              se = FALSE, color = 'red') +
+    geom_smooth(method = 'glm', method.args = list(family = binomial(link = 'probit')), 
+              se = FALSE, color = 'purple') +
+  theme_metro() + 
+  scale_y_continuous(breaks = c(0,1)) + 
+  annotate(geom = 'text', x = 5, y = .35, color = 'blue', label = 'OLS Prediction') +
+  annotate(geom = 'text', x = 7, y = .25, color = 'red', label = 'Logit') +
+  annotate(geom = 'text', x = 7, y = .2, color = 'purple', label = 'Probit') 
+```
+
+---
+
+# Probit and Logit in R
+
+- We can do probit in logit in R fairly easily
+- Instead of using `lm` ("linear model") we use `glm` ("generalized linear model")
+- And we must specify which *kind* of link function we have (`family = 'binomial'` for binary data)
+- And the actual link function (`link = 'logit'`)
+
+```{r, echo = TRUE}
+lpm <- lm(D~X, data = tib)
+logit <- glm(D~X, family = binomial(link = 'logit'), data = tib)
+probit <- glm(D~X, family = binomial(link = 'probit'), data = tib)
+```
+
+---
+
+# Probit and Logit in R
+
+From this we get... uh... hmm, what does this mean? Why are logit and probit so different if it doesn't matter which you use?
+
+```{r}
+export_summs(lpm, logit, probit, model.names = c("LPM", "Logit", "Probit"))
+```
+
+---
+
+# Probit and Logit
+
+- The interpretation of the probit and logit coefficients is that that's the effect of a one-unit change in $X$ on *the index*, not on $D$ directly
+- And since the scale of the index depends on the link function, So the interpretation depends on the link function 
+- From the coefficients themselves we can get direction (positive/negative) and significance, but not really scale
+- Which isn't too intuitive. Generally, when trying to interpret probit or logit coefficients, we instead transform them into statements about the effect of $X$ on the probability that $D = 1$ itself, similar to OLS
+- We'll get to how we do that in a moment!
+
+---
+
+# Concept Checks
+
+- Why can't we just use OLS when the dependent variable is binary, even if we are only interested in the slope?
+- What features would a link function need to have to model binary data?
+- Why does the slope on $X$ need to depend on the value of $X$ for this to work?
+
+---
+
+# Interpreting Probit and Logit
+
+- We are often interested in getting a result in the form "the effect of a one-unit increase in $X$ on the probability that $D = 1$ is..."
+- But we can't get this with our logit coefficients as-is
+- So we will generally calculate *marginal effects*
+- The marginal effect is what we get if we, well... check what the logit/probit model predicts happens to the average of $D$ if $X$ increases by 1
+
+---
+
+# Types of Marginal Effects
+
+- This is complicated somewhat by the fact that there is no one marginal effect
+- The effect of $X$, as we've seen, varies depending on how far left or right we are on the graph
+
+```{r}
+
+ggplot(tib, aes(x = X, y = D)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE, color = 'blue') + 
+  geom_smooth(method = 'glm', method.args = list(family = binomial(link = 'logit')), 
+              se = FALSE, color = 'red') +
+    geom_smooth(method = 'glm', method.args = list(family = binomial(link = 'probit')), 
+              se = FALSE, color = 'purple') +
+  theme_metro() + 
+  scale_y_continuous(breaks = c(0,1)) + 
+  annotate(geom = 'text', x = 5, y = .35, color = 'blue', label = 'OLS Prediction') +
+  annotate(geom = 'text', x = 7, y = .25, color = 'red', label = 'Logit') +
+  annotate(geom = 'text', x = 7, y = .2, color = 'purple', label = 'Probit') 
+```
+
+---
+
+# Types of Marginal Effects
+
+- And this isn't so much based on the value of $X$ as it is based on *the value of the index*
+- Meaning that the effect of $X$ on $P(D=1)$ depends on *every variable in the regression*
+
+$$ E(D|X,Z) = Logistic(\beta_0 + \beta_1X + \beta_2Z) $$
+$$ \partial D/\partial X = \beta_1Logistic(\beta_0 + \beta_1X + \beta_2Z)[1-Logistic(\beta_0 + \beta_1X + \beta_2Z)] $$
+
+- If we estimate $\hat{\beta}_0 = -2, \hat{\beta}_1 = 2, \hat{\beta}_2 = 1$, then the marginal effect of $X$ for someone with $X = 3, Z = 2$ is `.005`, but the marginal effect of $X$ for someone with $X = 1, Z = .5$ is `.470`
+- So what's "the" marginal effect?
+
+---
+
+# Types of Marginal Effects
+
+There are four common ways people present marginal effects:
+
+- Present the whole distribution! - Calculate each individual observation's marginal effect
+- The **Marginal Effect of a Representative** (MER): Pick a particular set of right-hand-side variables you're particularly interested in for some reason and calculate the marginal effect for them
+- The **Average Marginal Effect** (AME) - Calculate each individual observation's marginal effect, then take the mean
+- The **Marginal Effect at the Mean** (MEM) - Calculate the average of each variable, then get the marginal effect for some hypothetical observation with all those mean values
+
+MEM is easier to calculate (and often easier to interpret), but the AME is generally considered more appropriate - it takes into account how the variables correlate with each other, and doesn't produce a marginal effect for some average person with 2.3 kids who doesn't exist
+
+---
+
+# Marginal Effects in R
+
+There are a few standard ways in R to estimate marginal effects, none are perfect.
+
+We can calculate the individual marginal effects using `marginal_effects` and the MER and AME easily using `margins` in the **margins** package (`margins` can also be used to make MEM but you basically just calculate the means yourself and use that for a MER)
+
+```{r, echo = TRUE}
+library(margins)
+data(gss_cat, package = 'forcats')
+# Eliminate unused level
+gss_cat <- gss_cat %>% mutate(race = factor(race))
+marriedlogit <- glm(I(marital == 'Married') ~ age*tvhours + race, data = gss_cat)
+# At specific values: margins(marriedlogit, at = list(age = 30:35, tvhours = 3)). Or, AMEs:
+summary(margins(marriedlogit))
+```
+
+---
+
+# Marginal Effects in R
+
+Upsides of this approach:
+
+- Same function works for many different models
+- Easy to get AMEs, easy to get margins for each observation, or at particular values. Also, AME by default!
+- Plot the marginal effect easily with `plot(margins())`
+- Incorporates interactions into the marginal effect, which is averaged, which makes sense!
+
+Downsides:
+
+- As of this writing, to use with `export_summs()` you must first install the development version of **broom** with `remotes::install_github('tidymodels/broom')`. Easy fix there.
+- Because of the last point in "upsides", doesn't allow you to evaluate interaction effects (although this is also a plus because you probably don't actually want to do that - we'll get to this in the assigned paper for next week)
+- Can be finicky to use
+
+There are other marginal effects functions that all work roughly similarly to each other - use `logitmfx()` and `probitmfx()` in **mfx** if you must! But I do recommend **margins**
+
+---
+
+# Marginal Effects in R, Take 2
+
+```{r, echo = TRUE}
+library(mfx)
+# MEM by default, so we must set atmean = FALSE, and re-tell it our data
+logitfx <- logitmfx(marriedlogit, atmean = FALSE, data = gss_cat)
+export_summs(logitfx, digits = 4, statistics = c(N = 'nobs.1'))
+```
+
+---
+
+# Concept Checks
+
+- Why does each individual have their own marginal effect?
+- What's one reason we might not want to calculate a MEM?
+- What should we keep in mind when interpreting an AME that we calculate? Is this the effect of a one-unit change in $X$ on $P(D = 1)$?
+
+---
+
+# Hypothesis Testing (briefly!)
+
+- How can we calculate hypothesis tests for our logit and probit models?
+- For single coefficients, we can just use the standard t-statistics that are reported in the regression output
+- For multiple coefficients, we need to compare the full model to a restricted model!
+- We can just use `linearHypothesis()` as normal, although this doesn't do a likelihood ratio test like the book recommends
+- The models are estimated using maximum likelihood, so a likelihood ratio test makes sense. We can do this with `lrtest()` in **lmtest**
+
+```{r, echo = TRUE}
+library(lmtest)
+# Estimate the restricted model ourselves
+marriedlogit_norace <- glm(I(marital == 'Married') ~ age*tvhours, data = gss_cat)
+lrtest(marriedlogit, marriedlogit_norace)
+```
+
+---
+
+# Watch Out!
+
+Before we go, some things to watch out for when using probit or logit:
+
+- Doing *fixed effects* with probit or logit is a lot trickier. Neither de-meaning or adding dummies work. You gotta use specialized functions (like `feglm()` in **fixest**), and even then interpretations get trickier, and you're more likely to have the data fail you and get weird results
+- Both logit and probit are estimated using maximum likelihood, which doesn't perform as well as OLS in small samples. So LPM might be worth it if your data set is tiny (say, below 500)
+- Interaction terms in probit and logit models are much more tricky to interpret, and the marginal effects for them should be looked at with suspicion - you instead will want to work with `predict()`ed values and see how the interaction plays out there. See [Ai and Norton (2003)](https://www.sciencedirect.com/science/article/pii/S0165176503000326?casa_token=6s_iEmC5d6EAAAAA:nJdepSQey56XGlCa0Ty0ChxjrDgoM9KZkatzvjvghz2Hvx47Vv99mSWD9Y1Mn80Mo6roXgTa).
+
+---
+
+# Let's go!
+
+- Do the Swirl
+- Do the homeworks
+- Check out the assigned paper

@@ -175,6 +175,13 @@ knitr::include_graphics('opera_study.png')
 - As well as the procedural stuff we'll talk about here
 - They're not automatically better than other methods. The problems they face are just different
 
+---
+
+# Concept Checks
+
+- Even if we have an experiment that *statistically* picks up the exact effects we're looking for, what are some ways in which we might expect that it's picking up *unnatural behavior*?
+- Design a hypothetical experiment. It can be about anything you like. But also, select *what you want the outcome to be*. How might you be able to tip the scales in favor of that outcome by selecting a non-representative group to do the experiment on?
+- What are some things that would need to be true for us to assume that the results from an experiment apply to the whole population?
 
 ---
 
@@ -266,6 +273,15 @@ knitr::include_graphics('opera_study.png')
 - If we ran the underpowered study anyway and *do* get a significant result, it would be more likely to be a false positive than a true positive. That's low power for you!
 
 ---
+
+# Concept Checks
+
+- How many observations, roughly, would we need to get 90% power to detect a one-unit effect when the standard deviation is 10 and we have an experiment where half the sample is randomized into treatment and control?
+- Intuitively, why do we need more observations to have power to detect a small effect?
+- Which of these analyses is likely to have higher statistical power: detecting the effect of a job-training program on whether you find a job in the next month, or detecting the effect of that same job-training program on the proportion of the rest of your life that you spend unemployed?
+
+---
+
 
 # How to Randomize
 
@@ -494,6 +510,16 @@ c(assignment_effect, treatment_increase, scaled)
 
 export_summs(itt, twosls, statistics = c(N = 'nobs'))
 ```
+
+---
+
+# Concept Checks
+
+- Why do attrition and compliance only cause *really bad* problems when they're non-random?
+- How do we know that random non-compliance *shrinks* the effect, as opposed to estimating it to be too big?
+- Say we have 50 covariates, and we create a balance table for them. We get 3 statistically significant differences. Should we be concerned about our randomization procedure? Should we add controls to our analysis?
+- Say we are doing an experiment where we have no covariates. We get some attrition. What should we do?
+- Say we are doing an experiment where we don't have any information on whether someone was actually treated, just whether we assigned them to treatment. What should we be concerned about?
 
 ---
 
