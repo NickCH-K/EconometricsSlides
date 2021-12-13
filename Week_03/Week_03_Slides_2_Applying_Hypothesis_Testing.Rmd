@@ -144,6 +144,10 @@ export_summs(housingmodel)
 - Why do we have to use the standard error?
 - Is the coefficient on X in the below table significant at the 95% confidence level? Eyeball it!
 
+```{r}
+tib2 <- tibble(x = runif(20)) %>% mutate(y = runif(20) + x)
+export_summs(lm(y~x, data = tib2), stars = NULL)
+```
 
 ---
 

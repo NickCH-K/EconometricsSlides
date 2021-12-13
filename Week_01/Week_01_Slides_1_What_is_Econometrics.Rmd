@@ -80,6 +80,7 @@ theme_metro_regtitle <- function(x) {
 
 - Review the syllabus (and other materials on Canvas). Reading assignments there
 - Our textbook is Bailey's Real Econometrics. Read Chapters 1 and 2 this week!
+- Also [The Effect](https://theeffectbook.net) by me, can be read for free. Read Chapter 5 this week!
 - Also these slides
 - Programming in R: free, you will want to have access to it. We will get to this next time
 - Assignments: Weekly homework combining Bailey and R tasks

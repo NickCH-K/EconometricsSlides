@@ -215,6 +215,14 @@ What *changes* are included in each value?
 
 ---
 
+# Concept Checks
+
+- Why do we need a control group? What does this let us do?
+- What do we need to assume is true about our control group?
+- In 2015, a new, higher minimum wage went into effect in Seattle, but this increase did not occur in some of the areas surrounding Seattle. How might you use DID to estimate the effect of this minimum wage change on employment levels?
+
+---
+
 # Difference-in-Difference
 
 - Of course, this only uses four data points
@@ -375,11 +383,18 @@ means <- df %>%
 
 ---
 
-# Let's try OLS! (Interpret all parameters!)
+# Let's try OLS!
 ```{r, echo = TRUE}
 lm(work ~ after*treated, data = df) %>%
   export_summs(digits = 3)
 ```
+
+---
+
+# Concept Checks
+
+- There are four coefficients on the previous slide. Interpret them carefully in a sentence each.
+- Why can the $After \times TreatedGroup$ interaction stand in for $Treated$ ?
 
 ---
 
@@ -440,7 +455,7 @@ lm_robust(Outcome ~ CurrentlyTreated, fixed_effects = ~group + time, data = did_
 # Does it Work?
 
 - This gives us a causal effect as long as *the only reason the gap changed* was the treatment
-- If Adelaide would have grown six inches *anyway*, then the gap would have grown by 2 pill or not. The pill did nothing in that case! But we don't know that and mistakenly say it helped her grow by 2
+- If Adelaide would have grown six inches *anyway*, then the gap would have grown by 2, pill or not. The pill did nothing in that case! But we don't know that and mistakenly say it helped her grow by 2
 - In fixed effects, we need to assume that there's no uncontrolled endogenous variation across time
 - In DID, we need to assume that there's no uncontrolled endogenous variation *across this particular before/after time change*
 - An easier assumption to justify but still an assumption!
@@ -513,6 +528,14 @@ ggplot(df, aes(x = Time, y = Height, group = Person, label = Person)) +
 
 ---
 
+# Concept Checks
+
+- Go back to the Seattle minimum wage effect example from the first Concept Check slide. Clearly state what the parallel trends assumption means in this context.
+- It's possible (although perhaps unlikely) that parallel trends can hold even if it looks like the treatment and control groups were trending apart before treatment went into effect. How is this possible?
+- Some approaches to DID help ease the parallel trends assumption by "controlling for trend" - adjusting for the post-treatment jumps the treatment and control groups would have been expected to have based on their trends before treatment. When would this work? When would this not work?
+
+---
+
 # And a Warning!
 
 - One other note about DID is that its popularity is relatively recent, as things go, so we're still learning a lot about it!
@@ -528,4 +551,4 @@ ggplot(df, aes(x = Time, y = Height, group = Person, label = Person)) +
 # Swirl
 
 - Enough downers! Let's swirl
-- Let's do the Difference-in-differences swirl
+- Do the Difference-in-differences swirl

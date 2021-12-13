@@ -226,7 +226,6 @@ $$ \hat{\beta} \sim N(\beta, \hat{\sigma}/\sqrt{N\times var(X)}) $$
 - With smaller standard errors, can you pick different seeds to make the estimate be far from the truth?
 
 ---
---- 
 
 # Concept Checks
 

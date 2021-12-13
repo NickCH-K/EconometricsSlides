@@ -37,6 +37,17 @@ theme_metro_regtitle <- function(x) {
 }
 ```
 
+```{css, echo=FALSE}
+pre {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+pre[class] {
+  max-height: 100px;
+}
+```
+
 # Welcome to R
 
 - So cruel to set you up for econometrics and take a detour
@@ -52,6 +63,7 @@ theme_metro_regtitle <- function(x) {
 - Then we can download and install RStudio at [RStudio.com](Rstudio.com)
 - Then, R is installed and ready to go! Open up RStudio to get going
 - Alternately, you can skip installing anything and use [RStudio.cloud](RStudio.cloud) which runs entirely in the browser but is a bit slower and requires a (free) account
+- **If you installed R a while ago, please reinstall it. I'd like everyone to have 4.1 or newer.**
 
 ---
 
@@ -101,6 +113,7 @@ mean(data=="heads")
 - We can see the output of that code, if any
 - We can see any errors or warnings (in <span style="color: red">red</span>). Remember - errors mean it didn't work. Warnings mean it *maybe* didn't work.
 - Just because there's no error or warning doesn't mean it DID work! Always think carefully
+- Specific note: <span style="color: red">Warning: (package name) was built in R version (version number)</span> just means that your R installation isn't fully updated. Usually not a problem, but you can update R at [R-project.org](R-project.org) to make this go away
 
 ---
 
@@ -213,8 +226,9 @@ log(exp(1))
 - Packages stored on CRAN can be installed with `install.packages('packagename')`
 - Once a package is installed you don't need to install it again (except to update it)
 - But every time you open R you'll need to load it in again with `library(packagename)` if you want to use its functions
+- *Please don't* include package installation in your code itself; this will make you re-install the package every time you run!
 
-```{r, eval = FALSE}
+```{r, eval = FALSE, echo = TRUE}
 # If we haven't installed it yet
 # install.packages('vtable')
 library(vtable)
@@ -339,6 +353,7 @@ mean(mtcars$cyl)
 - **dplyr** is a collection of verbs for manipulating data, all strung together with the pipe `%>%` (which technically **dplyr** just borrows from **magrittr**)
 - **dplyr** has lots of functions in it. Today we'll cover just five: `pull()`, `filter()`, `%>%`, `select()`, and `mutate()`.
 - For all of these, don't forget that if you want to take the data frame you've changed and *keep* that change, you have to re-assign the object with `<-` or `=`!
+- If you already know a different way of doing things in R, I **strongly recommend** using the **dplyr** commands, if only for this class, as it will make it much easier to follow along with the material, and it's good to learn to pick up new things (and also in my experience you guys end up making things waaaay harder on yourselves by avoiding the switch)
 
 ---
 
@@ -353,6 +368,7 @@ mtcars$cyl
 pull(mtcars, cyl)
 pull(mtcars, 'cyl')
 pull(mtcars, 2)
+mtcars %>% pull(cyl)
 ```
 
 ---
