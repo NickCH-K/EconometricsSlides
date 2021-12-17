@@ -31,7 +31,7 @@ library(magick)
 # remotes::install_github('hadley/emo')
 library(emo)
 theme_metro <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16),
@@ -45,7 +45,7 @@ theme_void_metro <- function(x) {
         text = element_text(size = 16))
 }
 theme_metro_regtitle <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16))
@@ -407,8 +407,9 @@ $$Earnings = \beta_0 + \beta_1Preschool + \beta_2Location + \beta_3Background+\v
 set.seed(1234)
 ```
 
+
 ```{r, echo = TRUE}
-tib <- tibble(U1 = rnorm(1000), A = rnorm(1000), B = rnorm(1000)) %>%
+tib2 <- data.frame(U1 = rnorm(1000), A = rnorm(1000), B = rnorm(1000)) %>%
   mutate(C = U1 + rnorm(1000), D = U1 + rnorm(1000)) %>%
   mutate(X = A + C + rnorm(1000)) %>%
   mutate(Y = 4*X + A + B + D + rnorm(1000))
@@ -416,11 +417,10 @@ m1 <- lm(Y~X, data = tib)
 m1$coefficients
 ```
 
-
 ---
-
+  
 # The Diagram
-
+  
 - Here's the diagram we can draw from that information. What paths are there from `X` to `Y`?
 
 ```{r, dev = 'CairoPNG'}
@@ -447,23 +447,24 @@ ggdag_classic(dag,node_size=10) +
 3. $X \leftarrow C \leftarrow U_1 \rightarrow D \rightarrow Y$
 
 What do we *need* to control for to close all the paths we don't want? Assume we can't observe (and so can't control for) $U_1$
-
+  
 ---
-
+  
 # The Adjusted Analysis
-
+  
 - Remember, the true $\beta_1$ was 4
 
 ```{r}
-m2 <- lm(Y~X + A + C, data = tib)
-m3 <- lm(Y~X + A + D, data = tib)
+m2 <- lm(Y~X + A + C, data = tib2)
+m3 <- lm(Y~X + A + D, data = tib2)
 export_summs(m1,m2,m3)
 ```
 
 ---
-
+  
 # Concept Checks
-
+  
 - Why did we only need to control for $C$ *or* $D$ in that last example?
 - Draw a graph with five variables on it: $X$, $Y$, $A$, $B$, $C$. Then draw arrows at them completely at random (except to ensure there's no "loop" where you can follow an arrow path from arrow base to head and end up where you started). Then list every path from $X$ to $Y$ and say what you'd need to control for to identify the effect
 - What would you need to control for to estimate the effect of "drinking a glass of wine a day" on "lifespan"? Draw a diagram.
+                                                                                                                    

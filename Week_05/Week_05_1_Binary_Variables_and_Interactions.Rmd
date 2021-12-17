@@ -26,7 +26,7 @@ library(jtools)
 library(scales)
 library(Cairo)
 theme_metro <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16),
@@ -40,10 +40,21 @@ theme_void_metro <- function(x) {
         text = element_text(size = 16))
 }
 theme_metro_regtitle <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16))
+}
+```
+
+```{css, echo=FALSE}
+pre {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+pre[class] {
+  max-height: 100px;
 }
 ```
 
@@ -456,6 +467,9 @@ ggplot(logdf, aes(x = log(X), y = Y)) + geom_point() +
 - How can we interpret them?
 - The key is to remember that $\log(X) + a \approx \log((1+a)X)$, meaning that a $a$-unit change in $log(X)$ is similar to a $a\times100%$ change in $X$
 - So, walk through our "one-unit change in the variable" logic from before, but whenever we hit a log, change that into a percentage!
+- Note this *only works for a small $a$*! With natural logs, the approximation breaks down above $a = .1$ or so
+- Can interpret exactly instead: a $a$-unit change in $\log(X)$ is really a $(\log(1+a)-1)%$ change in $X$
+- Or you can change the base - a 1-unit change in $\log_{1+a}(X)$ is exactly a $a$% change in $X$.
 
 ---
 
@@ -626,6 +640,8 @@ PSID <- PSID %>%
 lm(log(earnings) ~ married, data = PSID)
 ```
 
+- Note: For some things in this course we'll be working with `feols()` from the **fixest** package instead of `lm()`. In that package you can do all of these things in different ways and more powerfully and flexibly: specifying categorical controls as "fixed effects" or using `i(var)` instead of `factor()`, and specifying interactions using `i(var1,var2)`. See [this guide](https://lrberge.github.io/fixest/articles/fixest_walkthrough.html) if you're interested.
+
 ---
 
 # Binary variables
@@ -633,7 +649,23 @@ lm(log(earnings) ~ married, data = PSID)
 - You can also use `I()` to specify binary variables in-model, or `case_when()` to create categorical variables
 - `case_when` works in steps - the first one that applies to you, you get, so that `TRUE` at the end catches "everyone else"
 
-```{r, echo = TRUE}
+```{r, echo = TRUE, eval = FALSE}
+PSID <- PSID %>%
+  mutate(education  = case_when(
+    educatn < 12 ~ 'No High School Degree',
+    educatn == 12 ~ 'High School Degree',
+    educatn < 16 ~ 'Some College',
+    educatn == 16 ~ 'Bachelor\'s Degree',
+    TRUE ~ 'Graduate Degree'
+  ))
+lm(log(earnings) ~ education + I(kids > 0), data = PSID)  
+```
+
+---
+
+# Binary Variables
+
+```{r, echo = FALSE, eval = TRUE}
 PSID <- PSID %>%
   mutate(education  = case_when(
     educatn < 12 ~ 'No High School Degree',
@@ -673,7 +705,7 @@ lm(Y ~ X + X:Z, data = df)
 
 # Tests
 
-- `linearHypothesis()` from **car** can be handy for testing groups of binary variables for a categorical with `matchCoef()`
+- `linearHypothesis()` from **car** can be handy for testing groups of binary variables for a categorical with `matchCoef()` (note: another **fixest** improvement here with its `wald()` function)
 - Also good for testing all the polynomial terms, or testing if the effect of $X$ is significant at a certain value of $Z$
 
 ```{r, echo = TRUE, eval = FALSE}

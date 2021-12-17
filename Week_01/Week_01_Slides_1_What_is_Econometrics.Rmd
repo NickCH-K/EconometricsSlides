@@ -23,7 +23,7 @@ library(tidyverse)
 library(directlabels)
 library(ggdag)
 theme_metro <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16),
@@ -31,7 +31,7 @@ theme_metro <- function(x) {
         axis.title.y = element_text(hjust = 1, angle = 0))
 }
 theme_metro_regtitle <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16))

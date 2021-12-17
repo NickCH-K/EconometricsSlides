@@ -17,6 +17,7 @@ output:
 
 
 ```{r setup, include=FALSE}
+
 options(htmltools.dir.version = FALSE) 
 knitr::opts_chunk$set(echo = FALSE, dev.args = list(png = list(type = "cairo")), warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
 library(tidyverse)

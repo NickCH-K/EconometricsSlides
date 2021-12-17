@@ -21,7 +21,7 @@ options(htmltools.dir.version = FALSE)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
 library(Cairo)
 theme_metro <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16),
@@ -35,7 +35,7 @@ theme_void_metro <- function(x) {
         text = element_text(size = 16))
 }
 theme_metro_regtitle <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16))

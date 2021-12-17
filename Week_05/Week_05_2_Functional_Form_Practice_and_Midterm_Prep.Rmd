@@ -27,7 +27,7 @@ library(Cairo)
 library(vtable)
 library(car)
 theme_metro <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16),
@@ -41,7 +41,7 @@ theme_void_metro <- function(x) {
         text = element_text(size = 16))
 }
 theme_metro_regtitle <- function(x) {
-  theme_minimal() + 
+  theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16))
@@ -88,7 +88,7 @@ Questions:
 
 # Discuss
 
-- 1. What is the causal effect we are trying to identify?
+- (1) What is the causal effect we are trying to identify?
 
 ---
 
@@ -103,7 +103,7 @@ Questions:
 
 # Discuss
 
-- 2. What do we mean by "an otherwise similar driver" and why might that be part of the research question?
+- (2) What do we mean by "an otherwise similar driver" and why might that be part of the research question?
 
 ---
 
@@ -117,7 +117,7 @@ Questions:
 
 # Discuss
 
-- 3. What might the causal diagram look like? (Note: this data only includes people *who were stopped* - that might be relevant!)
+- (3) What might the causal diagram look like? (Note: this data only includes people *who were stopped* - that might be relevant!)
 
 ---
 
@@ -150,7 +150,7 @@ ggdag_classic(dag, size = 5) +
 
 # Discuss
 
-- 4. What needs to be controlled for or not controlled for? Can we identify the effect?
+- (4) What needs to be controlled for or not controlled for? Can we identify the effect?
 
 ---
 
@@ -178,7 +178,7 @@ ggdag_classic(dag, size = 5) +
 
 # Discuss
 
-- 5. What *kinds of variables* are we working with?
+- (5) What *kinds of variables* are we working with?
 - (do the variables we have cover the kinds of things we need to control?)
 
 ---
@@ -206,7 +206,7 @@ vtable(MplsStops)
 
 # Discuss
 
-- 6. What should the regression look like?
+- (6) What should the regression look like?
 - What kinds of functional form checks should we do to see if we want polynomials or logs?
 - How should we construct the regression?
 
@@ -239,7 +239,7 @@ m3 <- lm(Stopped ~ Black*problem + neighborhood, data = MplsStops)
 
 # Discuss
 
-- 7. What is the result? (what tests should we look at?)
+- (7) What is the result? (what tests should we look at?)
 - Before we look at the result, what results might we see and how would we interpret them?
 - What checks would we want to do?
 - What tests should we run?
