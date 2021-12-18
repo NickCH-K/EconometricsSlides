@@ -21,7 +21,7 @@ options(htmltools.dir.version = FALSE)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
 library(tidyverse)
 library(gganimate)
-library(estimatr)
+library(fixest)
 library(magick)
 library(wooldridge)
 library(dagitty)
@@ -562,9 +562,9 @@ crime4 %>%
 # Going Professional
 
 - Applied researchers rarely do either of these, and rather will use a command specifically designed for fixed effects
-- In R, there are three big ones: `fixest` in **fixest**, `felm` in **lfe**, or `lm_robust` in **estimatr**
-- `lm_robust` is actually the *slowest* of these, but it is the easiest to use, so we'll go with that
-- Plus, it does robust SEs by default! Which is good, we usually do want them
+- In R, there are three big ones: `feols` in **fixest**, `felm` in **lfe**, `plm` in **plm**, or or `lm_robust` in **estimatr**
+- In my opinion `feols` is the clear winner. Plus, **fixest** does all sorts of other neat stuff like fixed effects in nonlinear models like logit, regression tables, joint-test functions, and on and on
+- Plus, it clusters the standard errors by the first fixed effect by default, which we usually want!
 - (it does put a bunch of extra calculations in our `export_summs` table but we can get rid of those with `statistics=`)
 
 ---
@@ -573,8 +573,8 @@ crime4 %>%
 
 ```{r, echo = TRUE}
 # If necessary, install.packages('estimatr')
-library(estimatr)
-pro <- lm_robust(crmrte ~ prbarr, data = crime4, fixed_effects = ~county)
+library(fixest)
+pro <- feols(crmrte ~ prbarr | county, data = crime4)
 export_summs(de_mean, pro, statistics = c(N = 'nobs', R2 = 'r.squared'))
 ```
 
