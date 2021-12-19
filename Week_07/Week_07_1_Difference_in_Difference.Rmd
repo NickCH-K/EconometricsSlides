@@ -27,7 +27,7 @@ library(dagitty)
 library(ggthemes)
 library(directlabels)
 library(ggdag)
-library(estimatr)
+library(fixest)
 library(jtools)
 library(scales)
 library(Cairo)
@@ -437,7 +437,7 @@ did_data
 # More!!
 
 ```{r, echo = TRUE}
-lm_robust(Outcome ~ CurrentlyTreated, fixed_effects = ~group + time, data = did_data) %>%
+feols(Outcome ~ CurrentlyTreated | group + time, data = did_data) %>%
   export_summs(statistics = c(N = 'nobs'))
 ```
 
