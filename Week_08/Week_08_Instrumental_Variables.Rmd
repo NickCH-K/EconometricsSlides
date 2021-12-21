@@ -27,7 +27,7 @@ library(dagitty)
 library(ggthemes)
 library(directlabels)
 library(ggdag)
-library(estimatr)
+library(fixest)
 library(jtools)
 library(scales)
 library(Cairo)
@@ -251,20 +251,20 @@ second_stage <- lm(Y ~ predict_X1 + X2, data = df)
 
 There are a bunch of ways to do it properly in R. The classic is `ivreg` in the **AER** package, but other functions are more fully-featured, including robust SEs, clustering, and fixed effects if you want them. `felm` in **lfe**, `tsls` in **sem**, a number of things in **ivpack**
 
-We'll be using `iv_robust` from **estimatr**, which has very similar syntax to `lm_robust` which we've already used, and includes heteroskedasticity-robust standard errors by default
+We'll be using `feols` from **fixest**
 
 ```{r, eval = FALSE, echo = TRUE}
-iv_regression <- iv_robust(Y ~ X1 + X2 | Z + X2, data = df)
+iv_regression <- feols(Y ~ X2 | X1 ~ Z, data = df, se = 'hetero')
 ```
 
 ---
 
 # R
 
-Of course, if we actually want to *look at* that first stage, we'll need to run it separately, just as before.
+If we actually want to *look at* that first stage, we can extract that
 
 ```{r, eval = FALSE, echo = TRUE}
-first_stage <- lm_robust(X1 ~ Z + X2, data = df)
+iv_regression$iv_first_stage
 ```
 
 ---
@@ -363,7 +363,7 @@ $$\frac{corr(Z,\varepsilon)}{corr(Z,X_1)}\frac{\sigma_\varepsilon}{\sigma_{X_1}}
 # Weak Instruments
 
 - Whatever we feel about the rules-of-thumb, they're quite common
-- We can get them using `diagnostics = TRUE` in our `iv_robust` to see the result of our "weak instrument test"
+- So much so that you get it by default when looking at `feols()` IV output
 
 ```{r, echo = FALSE}
 set.seed(200)
@@ -376,15 +376,17 @@ df <- fabricate(
   X2 = rnorm(N),
   G = sample(letters[1:4], N, replace = TRUE)
 )
+
+iv <- feols(Y ~ X2 | X1 ~ Z, data = df, se = 'hetero')
+thef <- fitstat(iv, 'ivf', verbose = FALSE)$`ivf1::X1`$stat
 ```
 
 ```{r, echo = TRUE}
-iv <- iv_robust(Y~ X1 + X2 | Z + X2, data = df, diagnostics = TRUE)
-iv$diagnostic_first_stage_fstatistic
-scales::number(iv$diagnostic_first_stage_fstatistic, accuracy = .01)
+iv <- feols(Y ~ X2 | X1 ~ Z, data = df, se = 'hetero')
+iv
 ```
 
-- `r scales::number(iv$diagnostic_first_stage_fstatistic[1], accuracy = .01)` is way far above 10! We're probably fine in this particular regression
+- `r scales::number(thef, accuracy = .01)` is way above 10! We're probably fine in this particular regression
 
 ---
 
@@ -505,9 +507,8 @@ df <- tibble(Z1 = rnorm(1000), Z2 = rnorm(1000)) %>%
   # True effect is 1
   mutate(Y = X + Z2 + rnorm(1000))
 
-iv <- iv_robust(Y~ X | Z1 + Z2, data = df, diagnostics = TRUE)
-iv$diagnostic_overid_test
-scales::number(iv$diagnostic_overid_test, accuracy = .001)
+iv <- feols(Y~ 1 | X ~ Z1 + Z2, data = df, se = 'hetero')
+fitstat(iv, 'sargan')
 ```
  - That's a small p-value! We can reject that the results are similar for each IV, telling us that one is endogenous (although without seeing the actual data generating process we couldn't guess if it were $Z1$ or $Z2$ )
 
@@ -518,8 +519,8 @@ scales::number(iv$diagnostic_overid_test, accuracy = .001)
 - And how different are they? What did the test see that it was comparing? (Notice the first model gives an accurate coefficient of 1)
 
 ```{r, echo = TRUE}
-iv1 <- iv_robust(Y~ X | Z1, data = df)
-iv2 <- iv_robust(Y~ X | Z2, data = df)
+iv1 <- feols(Y~ 1 | X ~ Z1, data = df)
+iv2 <- feols(Y~ 1 | X ~ Z2, data = df)
 
 export_summs(iv1, iv2, statistics = c(N = 'nobs'))
 ```

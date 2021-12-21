@@ -23,7 +23,7 @@ library(tidyverse)
 library(estimatr)
 library(dagitty)
 library(ggdag)
-library(estimatr)
+library(fixest)
 library(jtools)
 library(scales)
 library(Cairo)
@@ -463,12 +463,12 @@ sumtable(mtcars, group = 'am', group.test = TRUE)
 # Two stage least squares
 
 - If it's more complex - you have control variables, etc., you can't just do the scaling, and actually have to perform two-stage least squares.
-- Remember `lm_robust()` in `estimatr`? We conveniently also have `iv_robust()`
+- In the **fixest** package we conveniently also have `feols()` which can do two-stage least squares
 - If `treatment` is "actually getting treatment" and `assignment` is "being assigned to treatment" then we have
 
 ```{r, eval = FALSE, echo = TRUE}
-library(estimatr)
-iv_robust(outcome ~ treatment | assignment, data = experimentdata)
+library(fixest)
+feols(outcome ~ 1 | treatment ~ assignment, data = experimentdata)
 ```
 
 ---
@@ -492,9 +492,9 @@ tb <- tibble(assignment = sample(c(TRUE,FALSE),1000, replace = TRUE)) %>%
   # True effect is 2
   mutate(outcome = 2*treatment + 3*rnorm(1000))
 # Intent-to-treat
-itt <- lm_robust(outcome ~ treatment, data = tb)
+itt <- lm(outcome ~ treatment, data = tb)
 # 2sls to adjust for compliance
-twosls <- iv_robust(outcome ~ treatment | assignment, data = tb)
+twosls <- feols(outcome ~ 1 | treatment ~ assignment, data = tb)
 # Do the scaling by hand (since this is a simple case)
 treatment_increase <- (tb %>% filter(assignment) %>% pull(treatment) %>% mean()) - (tb %>% filter(!assignment) %>% pull(treatment) %>% mean())
 assignment_effect <- (tb %>% filter(assignment) %>% pull(outcome) %>% mean()) - (tb %>% filter(!assignment) %>% pull(outcome) %>% mean())

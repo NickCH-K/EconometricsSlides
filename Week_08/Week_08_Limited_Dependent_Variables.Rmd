@@ -51,6 +51,17 @@ theme_metro_regtitle <- function(x) {
 }
 ```
 
+```{css, echo=FALSE}
+pre {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+pre[class] {
+  max-height: 100px;
+}
+```
+
 # Check-in
 
 - We've spent a lot of time thinking about *research designs* - what we need to control for, finding natural experiments, etc.
@@ -304,6 +315,7 @@ ggplot(tib, aes(x = X, y = D)) +
 - Instead of using `lm` ("linear model") we use `glm` ("generalized linear model")
 - And we must specify which *kind* of link function we have (`family = 'binomial'` for binary data)
 - And the actual link function (`link = 'logit'`)
+- Note: the `feglm()` function in **fixest** works in almost the exact same syntax but allows for fixed effects, instrumental variables, etc. (don't try to do FE's on your own by hand in probit/logit)
 
 ```{r, echo = TRUE}
 lpm <- lm(D~X, data = tib)
@@ -403,7 +415,7 @@ MEM is easier to calculate (and often easier to interpret), but the AME is gener
 
 There are a few standard ways in R to estimate marginal effects, none are perfect.
 
-We can calculate the individual marginal effects using `marginal_effects` and the MER and AME easily using `margins` in the **margins** package (`margins` can also be used to make MEM but you basically just calculate the means yourself and use that for a MER)
+We can calculate the individual marginal effects using `marginal_effects` and the MER and AME easily using `margins` in the **margins** package (`margins` can also be used to make MEM but you basically just calculate the means yourself and use that for a MER). The `marginaleffects` function in the **marginaleffects** package works similarly.
 
 ```{r, echo = TRUE}
 library(margins)
@@ -432,19 +444,6 @@ Downsides:
 - Because of the last point in "upsides", doesn't allow you to evaluate interaction effects (although this is also a plus because you probably don't actually want to do that - we'll get to this in the assigned paper for next week)
 - Can be finicky to use
 
-There are other marginal effects functions that all work roughly similarly to each other - use `logitmfx()` and `probitmfx()` in **mfx** if you must! But I do recommend **margins**
-
----
-
-# Marginal Effects in R, Take 2
-
-```{r, echo = TRUE}
-library(mfx)
-# MEM by default, so we must set atmean = FALSE, and re-tell it our data
-logitfx <- logitmfx(marriedlogit, atmean = FALSE, data = gss_cat)
-export_summs(logitfx, digits = 4, statistics = c(N = 'nobs.1'))
-```
-
 ---
 
 # Concept Checks
@@ -462,6 +461,10 @@ export_summs(logitfx, digits = 4, statistics = c(N = 'nobs.1'))
 - For multiple coefficients, we need to compare the full model to a restricted model!
 - We can just use `linearHypothesis()` as normal, although this doesn't do a likelihood ratio test like the book recommends
 - The models are estimated using maximum likelihood, so a likelihood ratio test makes sense. We can do this with `lrtest()` in **lmtest**
+
+---
+
+# Hypothesis Testing (briefly!)
 
 ```{r, echo = TRUE}
 library(lmtest)

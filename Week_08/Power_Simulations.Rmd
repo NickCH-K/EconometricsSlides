@@ -120,8 +120,8 @@ Just from this construction we have set: (a) the true effect of $X$ on $Y$, (b) 
 We can take this data and perform whatever analysis we like on it. Let's say we plan to regress $Y$ on $X$ using robust standard errors, so let's use those.
 
 ```{r}
-library(estimatr)
-model <- lm_robust(Y ~ X, data = tib)
+library(fixest)
+model <- feols(Y ~ X, data = tib, se = 'hetero')
 ```
 
 ### Step 3: Pull out the Results we Want
@@ -172,7 +172,7 @@ for (i in 1:2000) {
     mutate(Y = .2*X + rnorm(1000, mean = 0, sd = 3))
   
   # Run the analysis
-  model <- lm_robust(Y ~ X, data = tib)
+  model <- feols(Y ~ X, data = tib, se = 'hetero')
   
   # Get the results
   coef_on_X <- coef(model)[2]
@@ -204,7 +204,7 @@ for (i in 1:2000) {
     mutate(Y = .2*X + rnorm(1000, mean = 0, sd = 3))
   
   # Run the analysis
-  model <- lm_robust(Y ~ X, data = tib)
+  model <- feols(Y ~ X, data = tib, se = 'hetero')
   
   # Get the results
   coef_results[i] <- coef(model)[2]
@@ -270,7 +270,7 @@ my_power_function <- function(x) {
       mutate(Y = .2*X + rnorm(1000, mean = 0, sd = 3))
     
     # Run the analysis
-    model <- lm_robust(Y ~ X, data = tib)
+    model <- feols(Y ~ X, data = tib, se = 'hetero')
     
     # Get the results
     coef_results[i] <- coef(model)[2]
@@ -294,7 +294,7 @@ my_power_function <- function(effect, sample_size) {
       mutate(Y = effect*X + rnorm(sample_size, mean = 0, sd = 3))
     
     # Run the analysis
-    model <- lm_robust(Y ~ X, data = tib)
+    model <- feols(Y ~ X, data = tib, se = 'hetero')
     
     # Get the results
     coef_results[i] <- coef(model)[2]
@@ -319,7 +319,7 @@ my_power_function <- function(effect, sample_size) {
       mutate(Y = effect*X + rnorm(sample_size, mean = 0, sd = 3))
     
     # Run the analysis
-    model <- lm_robust(Y ~ X, data = tib)
+    model <- feols(Y ~ X, data = tib, se = 'hetero')
     
     # Get the results
     sig_results[i] <- tidy(model)$p.value[2] <= .05

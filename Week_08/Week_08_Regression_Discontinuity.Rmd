@@ -27,7 +27,7 @@ library(dagitty)
 library(directlabels)
 library(ggdag)
 library(ggthemes)
-library(estimatr)
+library(fixest)
 library(jtools)
 library(rdrobust)
 library(scales)
@@ -51,6 +51,17 @@ theme_metro_regtitle <- function(x) {
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
         text = element_text(size = 16))
+}
+```
+
+```{css, echo=FALSE}
+pre {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+pre[class] {
+  max-height: 100px;
 }
 ```
 
@@ -579,8 +590,7 @@ df %>%
 
 # Fuzzy Regression Discontinuity
 
-- We can perform this using `iv_robust` from **estimatr**
-- Very similar to `lm_robust` which we've used before, except we specify two right-hand sides
+- We can perform this using `feols` from **fixest**, giving it two treatment-response functions
 - The first is an RDD specification where we use "treatment" - i.e. whether you were actually treated
 - The second uses the same RDD specification, but replaces "treatment" with "above the cutoff"
 
@@ -591,11 +601,11 @@ df %>%
 - (the true effect of treatment is .4 - okay, it's not perfect)
 
 ```{r, echo = TRUE}
-predict_treatment <- lm_robust(treatment ~ X_center*above_cut, data = df)
-without_fuzzy <- lm_robust(Y ~ X_center*treatment, data = df)
-fuzzy_rdd <- iv_robust(Y ~ X_center*treatment | X_center*above_cut, data = df)
+predict_treatment <- feols(treatment ~ X_center*above_cut, data = df)
+without_fuzzy <-feols(Y ~ X_center*treatment, data = df)
+fuzzy_rdd <- feols(Y ~ 1 | X_center*treatment ~ X_center*above_cut, data = df)
 
-export_summs(predict_treatment, without_fuzzy, fuzzy_rdd, coefs = c('above_cutTRUE','treatmentTRUE'), statistics = c(N = 'nobs'))
+export_summs(predict_treatment, without_fuzzy, fuzzy_rdd, statistics = c(N = 'nobs'))
 ```
 ---
 
