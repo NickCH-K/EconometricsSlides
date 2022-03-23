@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width 
 library(tidyverse)
 library(dagitty)
 library(ggdag)
-library(jtools)
+library(fixest)
 library(scales)
 library(Cairo)
 theme_metro <- function(x) {
@@ -91,7 +91,7 @@ We will look at three features of the right-hand side
 # Binary Data
 
 - A variable is binary if it only has two values - 0 or 1 (or "No" or "Yes", etc.)
-- Binary variable are super common in econometrics!
+- Binary variables are super common in econometrics!
 - Did you get the treatment? Yes / No
 - Do you live in the US? Yes / No
 - Is a floating exchange rate in effect? Yes / No
@@ -162,8 +162,7 @@ t.test(log(earnings) ~ married, data = PSID, var.equal = TRUE)
 - (In fact, a lot of specific tests can be replaced with basic regression, see [this explainer](https://lindeloev.github.io/tests-as-linear/))
 
 ```{r, echo = TRUE}
-lm(log(earnings) ~ married, data = PSID) %>%
-  export_summs(error_format = 't = {statistic}, p = {p.value}', digits = 5)
+feols(log(earnings) ~ married, data = PSID)
 ```
 
 ---
@@ -200,8 +199,7 @@ Why does OLS give us a comparison of means when you give it a binary variable?
 
 ```{r}
 PSID <- filter(PSID, kids < 98)
-lm(log(earnings) ~ married + kids + age , data = PSID) %>%
-  export_summs()
+etable(feols(log(earnings) ~ married + kids + age , data = PSID))
 ```
 
 ---
@@ -238,7 +236,7 @@ $$ \log(Earnings) = 3 + 6.47Married + 6.26NonMarried $$
 ```{r, echo = TRUE}
 tib <- tibble(group = sample(LETTERS[1:4], 10000, replace = TRUE)) %>%
   mutate(Y = rnorm(10000) + (group == "A") + 2*(group == "B") + 3*(group == "C") + 4*(group == "D"))
-lm(Y ~ group, data = tib)
+feols(Y ~ group, data = tib)
 ```
 
 ---
@@ -250,7 +248,7 @@ lm(Y ~ group, data = tib)
 
 ```{r, echo = TRUE}
 tib <- tib %>% mutate(group = factor(group, levels = c('B','A','C','D')))
-lm(Y ~ group, data = tib)
+feols(Y ~ group, data = tib)
 ```
 
 ---
@@ -258,7 +256,7 @@ lm(Y ~ group, data = tib)
 # More than Two Categories
 
 - Some Interpretations: Controlling for number of kids and age, people with a high school degree have log earnings .324 higher than those without a high school degree (earnings 32.4% higher). BA-holders have earnings 84.8% higher than those without a HS degree
-- Controlling for kids and age, a graduate degree earns (.976 - .848 =) 12.8% more than someone with a BA (`linearHypothesis()` could help!)
+- Controlling for kids and age, a graduate degree earns (.976 - .848 =) 12.8% more than someone with a BA (`glht()` could help!)
 
 ```{r}
 PSID <- PSID %>%
@@ -275,7 +273,7 @@ PSID <- PSID %>%
                                                   'Bachelor\'s Degree',
                                                   'Graduate Degree')))
 table(PSID$education)
-lm(log(earnings) ~ education + kids + age , data = PSID) 
+feols(log(earnings) ~ education + kids + age , data = PSID) 
 ```
 
 ---
@@ -398,11 +396,11 @@ So at $X = 0$, the effect of a one-unit change in $X$ is $\beta_1$. At $X = 1$, 
 
 ```{r, echo = TRUE, eval = FALSE}
 # Linear
-lm(Y ~ X, data = df)
+feols(Y ~ X, data = df)
 # Quadratic
-lm(Y ~ X + I(X^2), data = df)
+feols(Y ~ X + I(X^2), data = df)
 # Cubic
-lm(Y ~ X + I(X^2) + I(X^3), data = df)
+feols(Y ~ X + I(X^2) + I(X^3), data = df)
 ```
 
 ---
@@ -412,9 +410,9 @@ lm(Y ~ X + I(X^2) + I(X^3), data = df)
 - What's the effect of a one-unit change in $X$ at $X = 0$, $X = 1$, and $X = 2$ for each of these?
 
 ```{r}
-export_summs(lm(Y~X, data = df),
-             lm(Y~X + I(X^2), data = df),
-             lm(Y ~ X + I(X^2) + I(X^3), data = df))
+etable(feols(Y~X, data = df),
+             feols(Y~X + I(X^2), data = df),
+             feols(Y ~ X + I(X^2) + I(X^3), data = df))
 ```
 
 ---
@@ -488,8 +486,8 @@ Downsides:
 
 - Logarithms require that all data be positive. No negatives or zeroes!
 - Fairly rare that a variable with negative values wants a log anyway
-- But zeroes are common! A common practice is to just do $log(X+1)$ but this is pretty arbitrary
-- Better is the "inverse hyperbolic sine" `asinh()` transform which has a similar percentage interpretation for larger values but also works for 0, although this practice isn't entirely widespread yet
+- But zeroes are common! A common practice is to just do $log(X+1)$ or $asinh(X)=\ln(X+\sqrt{X^2+1})$ but these are pretty arbitrary
+- On the left-hand side at least, better to deal with 0s is Poisson regression
 
 ---
 
@@ -521,6 +519,8 @@ $$ \log(Y) = 4 + 3X $$
 - Enter interaction terms!
 
 $$ Y = \beta_0 + \beta_1X + \beta_2Z + \beta_3X\times Z + \varepsilon $$
+- Interaction terms are *a little tough* but also **extremely important**. Expect to come back to these slides, as you're almost certainly going to use interaction terms in both of your major projects this term
+
 
 ---
 
@@ -600,6 +600,7 @@ $$ \partial Y/\partial X = \beta_1 + \beta_3 Z $$
 - In these cases, we combine what we know about binary variables with what we know about interactions!
 - Now, instead of the intercept giving the baseline and the binary coefficient giving the difference, the coefficient on $X$ is the baseline effect of $X$ and the interaction is the difference in the effect of $X$
 - The interaction coefficient becomes "the difference in the effect of $X$ between the $Z$ = "No" and $Z$ = "Yes" groups"
+- (What if it's continuous? Mathematically the same but the thinking changes - the interaction term is the difference in the effect of $X$ you get when increasing $Z$ by one unit)
 
 ---
 
@@ -610,8 +611,7 @@ $$ \partial Y/\partial X = \beta_1 + \beta_3 Z $$
 ```{r}
 PSID <- PSID %>%
   mutate(college = educatn >= 16)
-lm(log(earnings) ~ married*college, data = PSID) %>%
-  export_summs()
+etable(feols(log(earnings) ~ married*college, data = PSID))
 ```
 
 ---
@@ -620,27 +620,23 @@ lm(log(earnings) ~ married*college, data = PSID) %>%
 
 - Like with polynomials, the coefficients on their own now have little meaning and must be evaluated alongside each other. $\beta_1$ by itself is just "the effect of $X$ when $Z = 0$", not "the effect of $X$"
 - Yes, you *do* almost always want to include both variables in un-interacted form and interacted form. Otherwise the interpretation gets very thorny
-- Interaction effects are *very poorly powered*. You need a *lot* of data to be able to tell whether an effect is different in two groups. If $N$ observations is adequate power to see if the effect itself is different from zero, you need a sample of roughly $16\times N$ to see if the difference in effects is nonzero. Sixteen times!!
-- It's tempting to try interacting your effect with everything to see if it's bigger/smaller/nonzero in some groups, but because it's so poorly powered, this is a bad idea! You'll get a lot of false positives
+- Interaction effects are *poorly powered*. You need a *lot* of data to be able to tell whether an effect is different in two groups. If $N$ observations is adequate power to see if the effect itself is different from zero, you need a sample of roughly $16\times N$ to see if the difference in effects is nonzero. Sixteen times!!
+- It's tempting to try interacting your effect with everything to see if it's bigger/smaller/nonzero in some groups, but because it's poorly powered, this is a bad idea! You'll get a lot of false positives
 
 ---
 
 # In R!
 
 - Binary variables in R (on the right-hand-side) you can just treat as normal variables
-- Categorical variables too (although if it's numeric you may need to run it through `factor()` first)
-- You can specify which group gets dropped using `factor()` and setting `levels` in it; the first level will be dropped.
+- Categorical variables too (although if it's numeric you may need to run it through `factor()` first, or `i()` in `feols()`)
+- In `feols()` you can specify which group gets dropped using `i()` and setting `ref` in it
 
 ```{r, echo = TRUE, eval = FALSE}
 # drops married = FALSE
-lm(log(earnings) ~ married, data = PSID)
-PSID <- PSID %>%
-  mutate(married = factor(married, levels = c(TRUE, FALSE)))
+feols(log(earnings) ~ married, data = PSID)
 # drops married = TRUE
-lm(log(earnings) ~ married, data = PSID)
+feols(log(earnings) ~ i(married, ref = 'TRUE'), data = PSID)
 ```
-
-- Note: For some things in this course we'll be working with `feols()` from the **fixest** package instead of `lm()`. In that package you can do all of these things in different ways and more powerfully and flexibly: specifying categorical controls as "fixed effects" or using `i(var)` instead of `factor()`, and specifying interactions using `i(var1,var2)`. See [this guide](https://lrberge.github.io/fixest/articles/fixest_walkthrough.html) if you're interested.
 
 ---
 
@@ -658,7 +654,7 @@ PSID <- PSID %>%
     educatn == 16 ~ 'Bachelor\'s Degree',
     TRUE ~ 'Graduate Degree'
   ))
-lm(log(earnings) ~ education + I(kids > 0), data = PSID)  
+feols(log(earnings) ~ education + I(kids > 0), data = PSID) |> etable()
 ```
 
 ---
@@ -674,7 +670,7 @@ PSID <- PSID %>%
     educatn == 16 ~ 'Bachelor\'s Degree',
     TRUE ~ 'Graduate Degree'
   ))
-lm(log(earnings) ~ education + I(kids > 0), data = PSID)  
+etable(feols(log(earnings) ~ education + I(kids > 0), data = PSID))
 ```
 
 ---
@@ -695,30 +691,34 @@ lm(log(Y) ~ log(X), data = df)
 
 - `X*Z` will include `X`, `Z`, and also their interaction
 - If necessary, `X:Z` is the interaction only, but you rarely need this. However, it's handy for referring to the interaction term in `linearHypothesis`!
+- In `feols()` the `i()` function is a very powerful way of doing interactions
 
 ```{r, echo = TRUE, eval = FALSE}
-lm(Y ~ X*Z, data = df)
-lm(Y ~ X + X:Z, data = df)
+feols(Y ~ X*Z, data = df)
+feols(Y ~ X + X:Z, data = df)
+feols(Y ~ i(Z, X), data = df)
+feols(Y ~ i(Z, X), data = df) |> iplot()
 ```
 
 ---
 
 # Tests
 
-- `linearHypothesis()` from **car** can be handy for testing groups of binary variables for a categorical with `matchCoef()` (note: another **fixest** improvement here with its `wald()` function)
+- `wald()` can be handy for testing groups of binary variables for a categorical
 - Also good for testing all the polynomial terms, or testing if the effect of $X$ is significant at a certain value of $Z$
 
 ```{r, echo = TRUE, eval = FALSE}
 # Is the education effect zero overall?
-m1 <- lm(log(earnings)~education, data = PSID)
-linearHypothesis(m1, matchCoefs(m1, 'education'))
+m1 <- feols(log(earnings)~educatn, data = PSID)
+wald(m1, 'educatn')
 
 # Does X have any effect?
-m2 <- lm(Y ~ X + I(X^2) + I(X^3), data = df)
-linearHypothesis(m2, c('X = 0', 'I(X^2) = 0', 'I(X^3) = 0'))
+m2 <- feols(Y ~ X + I(X^2) + I(X^3), data = df)
+wald(m2, 'X') # Gets all coefficients with an 'X' anywhere in the name - check this is right!
 
 # Is the effect of X significant when Z = 5?
+library(multcomp)
 m3 <- lm(Y ~ X*Z, data = df)
-linearHypothesis(m3, 'X + 5*X:Z = 0')
+glht(m3, 'X + 5*X:Z= 0') %>% summary()
 ```
 

@@ -23,6 +23,7 @@ library(tidyverse)
 library(jtools)
 library(scales)
 library(car)
+library(fixest)
 # remotes::install_github('hadley/emo')
 library(emo)
 theme_metro <- function(x) {
@@ -77,12 +78,13 @@ $$\frac{\hat{\beta}_1 - Null}{s.e.(\hat{\beta_1})}$$
 
 - That is, we subtract our null hypothesis value and divide by the standard error
 - This Z-score is our *test statistic*
+- The thing about test statistics in general (Z-scores, t-scores, F statistics, Chi square statistics, etc.) and why we want them: *we know their sampling distribution very well*
 
 ---
 
 # The Normal Null
 
-- Why do this transformation? Because the *sampling distribution assuming the null is true* is a normal with mean $Null$ and standard error $s.e.(\beta_1)$
+- Why do this transformation? Because the *sampling distribution of $Z$ assuming the null is true* is a normal with mean $Null$ and standard error $s.e.(\beta_1)$
 - So by subtracting the null (mean of the sampling distribution) and dividing by $s.e.(\beta_1)$ (standard deviation of the sampling distribution), the distribution under the null becomes a normal with mean-0 and standard-deviation-1, the standard normal. Very easy to work with!
 - The sampling distribution *of $\hat{\beta}_1$* under the null was the original normal distribution we started with, but the sampling distribution *of the Z-Score* under the null is a normal with mean 0 and s.d. 1
 - So if 2.5% of the area of the distribution is above our original estimate of $4.92$ in the original null distribution with mean $1$ and s.e. $2$, then 2.5% of the area will also be above our Z-score of $(4.92-1)/2$ in the standard normal
@@ -131,8 +133,8 @@ ggplot(df, aes(x = x, y = y)) + geom_line() +
 
 ```{r}
 data(txhousing)
-housingmodel <- lm(listings ~ inventory, data = txhousing)
-export_summs(housingmodel)
+housingmodel <- feols(listings ~ inventory, data = txhousing)
+etable(housingmodel)
 ```
 
 ---
@@ -146,7 +148,7 @@ export_summs(housingmodel)
 
 ```{r}
 tib2 <- tibble(x = runif(20)) %>% mutate(y = runif(20) + x)
-export_summs(lm(y~x, data = tib2), stars = NULL)
+etable(feols(y~x, data = tib2), signifCode = NA)
 ```
 
 ---
@@ -292,9 +294,9 @@ ggplot(dfd, aes(x = x, y = y)) +
 # F distribution
 
 ```{r}
-hm2 <- lm(inventory~median,data=slice(txhousing,1:503))
-export_summs(hm2, error_format = 'p-value = {p.value}')
-paste('F statistic for the coefficient on median price is',number(linearHypothesis(hm2, 'median = 0')$F[2]), 'p-value =',number(linearHypothesis(hm2, 'median = 0')$`Pr(>F)`[2]))
+hm2 <- feols(inventory~median,data=slice(txhousing,1:503))
+print(hm2)
+paste('F statistic for the coefficient on median price is',number(wald(hm2, 'median', print = FALSE)$stat, accuracy = .01), 'p-value =',number(wald(hm2, 'median', print = FALSE)$p, accuracy = .01))
 ```
 
 ---
@@ -308,13 +310,13 @@ dfd2 <- data.frame(x = 0:300/100, y = df(0:300/100,1, 495))
 
 ggplot(dfd2, aes(x = x, y = y)) + 
   geom_line() + 
-  geom_ribbon(data = filter(dfd2, x >= linearHypothesis(hm2, 'median = 0')$F[2]), aes(x = x, ymin = 0, ymax = y),
+  geom_ribbon(data = filter(dfd2, x >= wald(hm2, 'median', print = FALSE)$stat), aes(x = x, ymin = 0, ymax = y),
               alpha = .5) + 
-  scale_x_continuous(breaks = linearHypothesis(hm2, 'median = 0')$F[2], labels = function(x) number(x, accuracy = .001)) +
+  scale_x_continuous(breaks = wald(hm2, 'median', print = FALSE)$stat, labels = function(x) number(x, accuracy = .001)) +
   theme_metro() + 
   theme(panel.grid = element_blank()) +
   labs(x = "Value", y = "Density") + 
-  annotate(geom = 'text', x = .82, y = .17, label = percent(linearHypothesis(hm2, 'median = 0')$`Pr(>F)`[2]), 
+  annotate(geom = 'text', x = .82, y = .17, label = percent(wald(hm2, 'median', print = FALSE)$p), 
            hjust = 0, size = 16/.pt)
 ```
 
@@ -333,10 +335,9 @@ ggplot(dfd2, aes(x = x, y = y)) +
 
 - By default, regression results will perform tests using the t distribution
 - Rather than switching to a normal null for big samples, it will keep using t, but with large samples that's basically normal anyway
-- `summary(lm())` will show us the t-statistic as well as the p-value compared to 0
-- `export_summs()` (which will properly adjust the tests for heteroskedasticity if you ask!) will show only standard errors by default, but we can ask its `error_format` option for either `'{statistic}'` to get the t-stat, or `'{p.value}'` to get the p-value (or both)
-- (you could even ask `export_summs()` for a confidence interval with `error_format = [{conf.low}, {conf.high}]`, by default 95%)
-- Both will report "stars" - if the p-value is below a certain $alpha$, you get stars! By default, `*` means $p < .05$, `**` means $p < .01$, and `***` means $p < .001$.
+- `feols()` and show us the t-statistic, standard error, and p-value compared to 0 (and can adjust for heteroskedasticity and clustering if you want!).
+- `etable()` will default to standard error, but `etable(coefstat = 'confint')` can give you confidence intervals
+- Both will report "stars" - if the p-value is below a certain $alpha$, you get stars! Be careful - the defaults are different in `feols()` by itself (`r '*'`) = .05) and `etable()` (`r '**'` = .05)
 
 ---
 
@@ -344,8 +345,8 @@ ggplot(dfd2, aes(x = x, y = y)) +
 
 ```{r, echo = TRUE}
 data(SLID, package = 'carData')
-model <- lm(wages ~ education, data = SLID)
-summary(model)
+model <- feols(wages ~ education, data = SLID)
+print(model)
 ```
 
 ---
@@ -353,7 +354,7 @@ summary(model)
 # Hypothesis Testing in R
 
 ```{r, echo = TRUE}
-export_summs(model, error_format = '(t = {statistic}, p = {p.value})')
+etable(model)
 ```
 
 ---
@@ -364,7 +365,7 @@ export_summs(model, error_format = '(t = {statistic}, p = {p.value})')
 
 
 ```{r, echo = TRUE}
-plot_coefs(model)
+coefplot(model)
 ```
 
 ---
@@ -372,19 +373,15 @@ plot_coefs(model)
 # Hypothesis Testing in R
 
 - How about tests against non-0 nulls, or F tests?
-- We can calculate a z-score ourselves and do a non-0 null that way, or we can use `linearHypothesis` from **car** to do F-tests
-- Just tell it what value you want to test the coefficient against!
+- We can calculate a z-score ourselves and do a non-0 null that way, or we can use `wald()` from **fixest** to do F-tests comparing multiple coefficents to 0 (note this does a "regular expression" so you can easily do many coefficients with little typing)
+- or `glht()` from **multcomp** for more complex stuff
 
 ```{r}
-library(car)
-linearHypothesis(model, c('education = 0'))
-linearHypothesis(model, c('education = .75'))
+wald(model, 'education')
+library(multcomp)
+model %>% glht('education = .75') %>% summary()
+model %>% glht('3*education + (Intercept) = 7') %>%summary()
 ```
-
-Again eyeing the regression table and looking at stars
-Using linearHypothesis
-(incl. with robust SEs)
-Plotting CIs and calculating CIs.
 
 
 ---

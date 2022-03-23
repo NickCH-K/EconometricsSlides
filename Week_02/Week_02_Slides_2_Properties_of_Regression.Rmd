@@ -26,6 +26,7 @@ library(jtools)
 library(purrr)
 library(Cairo)
 library(magick)
+library(fixest)
 theme_metro <- function(x) {
   theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
@@ -81,7 +82,7 @@ $$ \hat{Y} = \hat{\beta}_0 + \hat{\beta}_1X $$
 - However, we can't see all the data, we can only see a sample
 - The point of statistics generally is to generalize from that sample to figure out the underlying process
 - And, just by chance, the best-fit line is going to be different in each sample
-- The variation in $\hat{\beta}_0$ and $\hat{\beta}_1$ that occurs *purely because of that random sampling is sampling variation
+- The variation in $\hat{\beta}_0$ and $\hat{\beta}_1$ that occurs *purely because of that random sampling* is sampling variation
 
 ---
 
@@ -323,7 +324,7 @@ tb <- tibble(InterestInSubject = runif(200)) %>%
   mutate(ClassGrade = .1*StudyTime + InterestInSubject)
 
 # InterestInSubject is not in the model, it's in the error!
-lm(ClassGrade ~ StudyTime, data = tb)
+feols(ClassGrade ~ StudyTime, data = tb)
 ```
 
 - Uh oh...
@@ -373,6 +374,17 @@ $$\beta_1 + corr(X,\varepsilon)\frac{\sigma_\varepsilon}{\sigma_X}$$
 
 ---
 
+# Thinking Through this Bias
+
+- If $Z$ hangs around $X$, but $Y$ doesn't know about it, then the coefficient on $X$ will get all the credit for $Z$
+- This is a good way to keep that "direction of bias" problem in mind
+- And you do want to keep it in mind! This is important for understanding general correlations you see in the wild, too
+- And helps keep in line some things - for example, **if $Z$ is unrelated to $X$, it won't bias you!!**
+- That means that when you're thinking about the controls you **need**, that **only** includes things related to $X$
+- Adding controls for things related to $Y$ not $X$ can make the model predict better and reduce standard errors, but won't remove omitted variable bias
+
+---
+
 # Less Serious Error Concerns
 
 - Omitted variable bias can, well, bias us, which is very bad
@@ -404,12 +416,12 @@ tb %>%
 # Heteroskedasticity
 
 - We can correct for this using *heteroskedasticity-robust standard errors* which sort of "squash down" the big variances and then re-estimate the standard errors
-- We can do this in `export_summs` in **jtools** with `robust = TRUE`
+- We can do this in `feols` with `vcov = 'hetero'`
+- Let's also start viewing our regression results in table format with **fixest**'s `etable()` while we're at it
 
-```{r}
-library(jtools)
-reg <- lm(Y~X, data = tb)
-export_summs(reg, robust = TRUE)
+```{r, echo = TRUE}
+reg <- feols(Y~X, data = tb, vcov = 'hetero')
+etable(reg)
 ```
 
 ---
@@ -426,13 +438,14 @@ export_summs(reg, robust = TRUE)
 # Clustered Errors
 
 - We'll leave autocorrelation to our time series segment
-- But for clustering we can just use *cluster-robust standard errors*. We just need to also give it the variable that we think the errors are clustered in
+- But for clustering we can just use *cluster-robust standard errors*. We just need to also give it the variable that we think the errors are clustered in, again in `vcov` with `~variable`
 
-```{r}
+```{r, echo = TRUE}
 data(Orange)
-treemodel <- lm(circumference~age, data = Orange)
-export_summs(treemodel, cluster = 'Tree')
+treemodel <- feols(circumference~age, data = Orange, vcov = ~Tree)
+etable(treemodel)
 ```
+
 
 ---
 

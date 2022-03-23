@@ -1,0 +1,145 @@
+---
+title: "Data Cleaning and the Data Exploration Project"
+date: "Updated `r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    self_contained: TRUE
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    # Run xaringan::summon_remark() for this
+    #chakra: libs/remark-latest.min.js
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE) 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 6)
+library(tidyverse)
+library(dagitty)
+library(ggdag)
+library(fixest)
+library(scales)
+library(Cairo)
+library(vtable)
+theme_metro <- function(x) {
+  theme_classic() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16),
+        axis.title.x = element_text(hjust = 1),
+        axis.title.y = element_text(hjust = 1, angle = 0))
+}
+theme_void_metro <- function(x) {
+  theme_void() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+theme_metro_regtitle <- function(x) {
+  theme_classic() + 
+  theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        plot.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
+        text = element_text(size = 16))
+}
+```
+
+# Check-in
+
+- Part of the task for the data exploration project is cleaning the data
+- This is to reflect how working with data functions in the real world
+- Cleaning data takes time. Do not leave it for the last second
+- I warn students every time and they never listen, and they're tearing their hair out trying to get it done in the few days before the project is due. Please listen. 
+- I'm serious
+- I mean it
+- Why don't people believe me when I tell them this
+
+---
+
+# Tips
+
+- These slides contain some tips and reminders that will help you in preparing the data in this particular project, and setting up analysis
+- It won't just provide answers because part of the point of all of this is figuring out how to work with raw data yourself
+- Many of the tips here are just repeats of what's on the assignment sheet - I'd strongly recommend reading through that thoroughly. In general, assignment sheets contain important information and documentation
+
+---
+
+# The Goal
+
+- When cleaning data, think about what you want your final data to look like
+- For this project, we want Google trends index data at some level (perhaps its original keyword-by-week level, or aggregated to keyword-by-month, or college-by-week, or college-by-month etc.) combined with the Scorecard data about schools
+- So our tasks are:
+
+1. Read in the Google Trends data
+1. Aggregate the Google Trends data how we want it
+1. Read in the Scorecard data
+1. Merge in the Scorecard data
+
+That's it.
+
+---
+
+# Reading in the Google Trends data
+
+- Use `list.files()`, probably with the `full.names = TRUE` option, to create a vector of filenames of all the `trends_up_to_` files are
+- Give `map_df()` from the **purrr** package your vector of filenames and a CSV reading function (**Note:** the `read_csv()` function from the **tidyverse** is basically always better than `read.csv()`, and will help you avoid issues).
+- `map_df()` will apply the `read_csv()` function to each of your files and so read them in. Then, because you're using the `_df` version of `map`, it will stack them all on top of each other to give you a single data set of Google Trends data. Done!
+
+---
+
+# Aggregating the Google Trends data
+Getting date data:
+
+- You're probably going to want to get an actual date variable to do aggregation and modeling. `monthorweek` is a string
+- Use `str_sub` to get the first ten characters out of the `monthorweek` variable
+- Then, load the **lubridate** package and use the `ymd()` function to turn that into an actual usable date
+- If you want to aggregate the dates further, say to do months rather than weeks, you can use the `floor_date()` function from **lubridate**. Setting the units to `'month'`, for example, will "round down" all dates in the same month to be the first of the month
+
+
+---
+
+# Aggregating the Google Trends data 
+
+Aggregating
+
+- We can't aggregate the `index` variable as-is since they're all on different scales
+- Use `group_by()` and `mutate()` to standardize the `index` variable by school name and keyword (subtract the mean of `index` and then divide the result by the standard deviation of `index`, calculating both of those within school name and keyword)
+- Now, a one-unit change in the standardized `index` can be understood and interpreted as a one-standard-deviation change in search interest
+- Now, if you want, you can use `group_by()` and `summarize()` to aggregate your standardized `index` to the keyword-month level, or school-week level, or school-month level, or whatever you want
+
+---
+
+# Reading in the Scorecard data
+
+- You can just use `read_csv()` to read in the Scorecard data (`'Most+Recent+Cohorts+(Scorecard+Elements)'`). The dictionary file you can also read in if you like, although you're probably just better off opening that in Excel to read it - you're going to use that to figure out what all the variables are but you're not going to use the dictionary in analysis.
+- You can also use `read_csv()` to read in the `id_name_link` file.
+
+---
+
+# Merge in the Scorecard data
+
+- First, use `group_by()` and `mutate(n = n())` to count how many times each school name pops up in `id_name_link`, and then `filter` to get rid of any school names that show up more than once
+- Now you can finally join your data together. Your goal here is to use the `schname` variable to link up the Google trends data to `id_name_link`, and then the `unitid` and/or `opeid` columns to link THAT to the Scorecard data. `inner_join()` can perform both of these links
+- (`inner_join` will drop any rows that don't find a match, which is fine for this project. The other `_join` functions behave differently about non-matches)
+
+Ta-da, you have usable data!
+
+---
+
+# Some analysis notes
+
+- The Scorecard policy is implemented at a particular time, and looking at how the Scorecard shifted interest really means looking at whether interest shifted at that particular time. This means that *anything that changes over time* is a potential source of endogeneity, even if it isn't inherently related to the Scorecard
+- Using your graphical analysis to look for these sorts of time trends to see if you need to adjust for them might not be a bad idea!
+- In the past I've seen some students add seasonality controls by doing things like adding a set of controls for month-of-the-year. You can use `month()` from **lubridate** to pull the month out of your date variable, and add it to the regression with `i()`. Controlling for time trends is also an option.
+- You also have panel data here. There's plenty you could do with that!
+
+---
+
+# Some analysis notes
+
+- Remember, your goal here is to see how the Scorecard shifted interest between high- and low-earnings colleges
+- This is inherently asking *how the effect of the Scorecard was different* between these different kinds of colleges. What does this sound like?
+- There are many "right answers" of how to analyze this, but whatever method you use needs to allow for that key result

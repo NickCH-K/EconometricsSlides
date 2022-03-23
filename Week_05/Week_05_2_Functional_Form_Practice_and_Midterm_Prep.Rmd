@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width 
 library(tidyverse)
 library(dagitty)
 library(ggdag)
-library(jtools)
+library(fixest)
 library(scales)
 library(Cairo)
 library(vtable)
@@ -230,9 +230,9 @@ vtable(MplsStops)
 MplsStops <- MplsStops %>%
   mutate(Stopped = personSearch == 'YES' | vehicleSearch == 'YES',
          Black = race == 'Black')
-m1 <- lm(Stopped ~ Black, data = MplsStops)
-m2 <- lm(Stopped ~ Black + problem + neighborhood, data = MplsStops)
-m3 <- lm(Stopped ~ Black*problem + neighborhood, data = MplsStops)
+m1 <- feols(Stopped ~ Black, data = MplsStops)
+m2 <- feols(Stopped ~ Black + problem + neighborhood, data = MplsStops)
+m3 <- feols(Stopped ~ Black*problem + neighborhood, data = MplsStops)
 ```
 
 ---
@@ -249,13 +249,12 @@ m3 <- lm(Stopped ~ Black*problem + neighborhood, data = MplsStops)
 
 # 7. The Result (neighb. coefs omitted)
 
-- Interpret these coefficient (keep in mind Neighborhood is not shown)!
+- Interpret these coefficients (keep in mind Neighborhood is not shown)!
 - Do we think that the coefficient on Black is likely to be biased up or down?
 
 ```{r}
-export_summs(m1, m2, m3, 
-             coefs = c('BlackTRUE', 'problemtraffic', 'BlackTRUE:problemtraffic'),
-             statistics = c(N = 'nobs'))
+etable(m1, m2, m3, 
+             keep = c('BlackTRUE', 'problemtraffic', 'BlackTRUE:problemtraffic'))
 ```
 
 ---
@@ -265,7 +264,7 @@ export_summs(m1, m2, m3,
 - How about that R squared? Should we be concerned? What does it mean exactly?
 
 ```{r, echo = TRUE}
-summary(m3)$r.squared
+fitstat(m3, 'r2')
 ```
 
 ---
@@ -281,7 +280,7 @@ MplsStops %>%
   summarize(variance_of_resid = var(resid))
 ```
 
-- Pretty different! Let's use robust SEs
+- Pretty different! Let's use robust SEs (note we can do these after the fact in `etable()` directly)
 - (tip: with a binary dependent variable you pretty much ALWAYS want robust SEs)
 
 
@@ -290,10 +289,9 @@ MplsStops %>%
 # The Result with Robust SEs
 
 ```{r}
-export_summs(m1, m2, m3, 
-             coefs = c('BlackTRUE', 'problemtraffic', 'BlackTRUE:problemtraffic'),
-             statistics = c(N = 'nobs'),
-             robust = TRUE)
+etable(m1, m2, m3, 
+             keep = c('BlackTRUE', 'problemtraffic', 'BlackTRUE:problemtraffic'),
+             vcov = 'hetero')
 ```
 
 
@@ -311,7 +309,8 @@ export_summs(m1, m2, m3,
 # Other Tests
 
 ```{r, echo = TRUE}
-linearHypothesis(m3, 'BlackTRUE + BlackTRUE:problemtraffic = 0')
+library(multcomp)
+glht(m3, 'BlackTRUE + BlackTRUE:problemtraffic = 0') %>% summary()
 ```
 
 - Yep, still significant at the .1% level! A 7% gap is pretty big, too.
@@ -379,7 +378,7 @@ ggplot(charity %>% group_by(mailsyear) %>% mutate(meangift = mean(gift)), aes(x 
 
 # Raw Data with mean-by-value, logged gift+1
 
-- Remember, $\log(x+1)$ is a hack; $asinh(x)$ would have been better
+- Remember, $\log(x+1)$ is a hack
 - (why is that mean so low?)
 
 ```{r,  dev = 'CairoPNG', fig.width = 7, fig.height = 5}
@@ -395,10 +394,10 @@ ggplot(charity %>% group_by(mailsyear) %>% mutate(meangift = exp(mean(log(gift+1
 # Regressions
 
 ```{r}
-m1 <- lm(gift ~ mailsyear, data = charity)
-m2 <- lm(gift ~ mailsyear + propresp + giftlast, data = charity)
-m3 <- lm(gift ~ mailsyear + giftlast + avggift, data = charity)
-export_summs(m1,m2,m3)
+m1 <- feols(gift ~ mailsyear, data = charity)
+m2 <- feols(gift ~ mailsyear + propresp + giftlast, data = charity)
+m3 <- feols(gift ~ mailsyear + giftlast + avggift, data = charity)
+etable(m1,m2,m3)
 ```
 
 ---

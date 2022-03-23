@@ -24,7 +24,7 @@ library(dagitty)
 library(gganimate)
 library(car)
 library(ggdag)
-library(jtools)
+library(fixest)
 library(scales)
 library(Cairo)
 library(magick)
@@ -56,7 +56,7 @@ theme_metro_regtitle <- function(x) {
 
 - Last time we talked about multivariate regression and controlling for variables
 - If our $X$ of interest is related to the error term, we have endogeniety, and the mean of the sampling variation of $\hat{\beta}_1$ won't be $\beta_1$ (i.e. it's biased)
-- If we can figure out all the *other reasons* why $X$ and $Y$ might be related, we can control for them in the regression
+- If we can figure out all the *other reasons* why $X$ and $Y$ might be related, the back doors. And we can close those back doors to identify our effect by controlling for variables along those back door paths
 - We draw a causal diagram and list the paths
 - If we can control for one thing on each path, then that washes out the variation from those paths, and the only remaining reason $X$ and $Y$ are related is that $X$ causes $Y$ - causal identification!
 
@@ -225,10 +225,10 @@ set.seed(14233)
 ```{r, echo=TRUE}
 survey <- tibble(prog=rnorm(1000),social=rnorm(1000)) %>%
   mutate(hired = (prog + social > .25))
-basic <- lm(prog~social, data = survey)
-hiredonly <- lm(prog~social, data = survey %>% filter(hired))
-withcontrol <- lm(prog ~ social + hired, data = survey)
-export_summs(basic, hiredonly, withcontrol, statistics = c(N = 'nobs'))
+basic <- feols(prog~social, data = survey)
+hiredonly <- feols(prog~social, data = survey %>% filter(hired))
+withcontrol <- feols(prog ~ social + hired, data = survey)
+etable(basic, hiredonly, withcontrol)
 ```
 
 ---
@@ -316,6 +316,7 @@ In each case, we're controlling for something we shouldn't. Is this a case of wa
 - It's *not* a measure of how good the model is (experiments often have low $R^2$, and $R^2$ doesn't care about whether $\hat{\beta}_1$ is unbiased)
 - It's not even a perfect measure even of predictive power (it doesn't care about predicting out of sample, and is sensitive to irrelevant variables being added)
 - *Never* choose your model based on the $R^2$ being higher
+- Every term, I tell students not to worry too much about $R^2$, and every term I get students coming to me telling me they plan to change their model to raise $R^2$. **I am begging you not to worry too much about $R^2$** It's not that important for what we're doing.
 - It's just a decent diagnostic to get a sense of how much of the variance $Y$ you're predicting, and how much is left over
 
 ---
@@ -353,9 +354,9 @@ df <- tibble(X = runif(1000)) %>%
   bind_rows(tibble(X = runif(1000)) %>%
               mutate(Y = 2*X + 2*rnorm(1000),
                      type = 'High R Squared'))
-high <- lm(Y~X, data = df %>% filter(type =='High R Squared'))
-low <- lm(Y~X, data = df %>% filter(type == 'Low R Squared'))
-export_summs(high, low)
+high <- feols(Y~X, data = df %>% filter(type =='High R Squared'))
+low <- feols(Y~X, data = df %>% filter(type == 'Low R Squared'))
+etable(high, low)
 ```
 
 
@@ -394,11 +395,11 @@ $$ Y = \beta_0 + \varepsilon $$
 
 ```{r, echo = TRUE}
 data(Salaries, package = 'carData')
-unrestricted <- lm(salary ~ yrs.since.phd + yrs.service + sex, data = Salaries)
-restricted <- lm(salary ~ yrs.since.phd, data = Salaries)
+unrestricted <- feols(salary ~ yrs.since.phd + yrs.service + sex, data = Salaries)
+restricted <- feols(salary ~ yrs.since.phd, data = Salaries)
 
-summary(unrestricted)$r.squared
-summary(restricted)$r.squared
+fitstat(unrestricted, 'r2')
+fitstat(restricted, 'r2')
 ```
 
 ---
@@ -406,7 +407,7 @@ summary(restricted)$r.squared
 # F tests
 
 ```{r}
-export_summs(unrestricted, restricted)
+etable(unrestricted, restricted)
 ```
 
 ---
@@ -416,13 +417,14 @@ export_summs(unrestricted, restricted)
 - We basically just take a ratio based on $R^2$ values. On top: additional explanatory power scaled by the number of restrictions (on top), and on bottom the explanatory power left to go scaled by $N$ minus the number of variables
 
 ```{r, echo = TRUE}
-r2_unres <- summary(unrestricted)$r.squared
-r2_res <- summary(restricted)$r.squared
+r2_unres <- fitstat(unrestricted, 'r2')$r2 %>% unname()
+r2_res <- fitstat(restricted, 'r2')$r2 %>% unname()
 
+# Calculate by hand
 ((r2_unres - r2_res)/2) / ((1 - r2_unres)/(397 - 4))
 
-library(car)
-linearHypothesis(unrestricted, c('yrs.service = 0','sexMale = 0'))$F
+# Have the wald() function do it for us (note F is the same!)
+wald(unrestricted, c('yrs.service','sexMale'))
 ```
 
 ---
@@ -431,6 +433,7 @@ linearHypothesis(unrestricted, c('yrs.service = 0','sexMale = 0'))$F
 
 - Why would we want to do this?
 - We might want to see if a *set of variables* has explanatory power: for example, does adding a bunch of background variables improve prediction?
+- A t-test asks if a single coefficient is 0. The F-test asks if a bunch of coefficients are 0 at the same time
 - If those variables overlap a lot, then each individual one might be insignificant but the group could be important
 - Also, we might want to know if two coefficients are not just nonzero, but *equal to each other*
 - "Does this variable have a similarly-sized effect to this other variable?"
@@ -439,10 +442,13 @@ linearHypothesis(unrestricted, c('yrs.service = 0','sexMale = 0'))$F
 
 # F tests
 
-- Do `yrs.since.phd` and `yrs.service` have the same effect but of opposite signs? No!
+- F tests are broader, too - you can test other restrictions on coefficients, not just seeing if they're all 0
+- Do `yrs.since.phd` and `yrs.service` have the same effect but of opposite signs (in other words, if you add them together do you get 0)? No!
 
 ```{r, echo = TRUE}
-linearHypothesis(unrestricted, 'yrs.since.phd = -yrs.service')
+library(multcomp)
+# Generalized Linear Hypothesis Test
+glht(unrestricted, 'yrs.since.phd + yrs.service = 0') %>% summary()
 ```
 
 ---
@@ -461,7 +467,7 @@ linearHypothesis(unrestricted, 'yrs.since.phd = -yrs.service')
 - Conveniently, adding more variables to an OLS model in R is just an issue of... literally adding them
 
 ```{r, echo = TRUE}
-model <- lm(salary ~ yrs.since.phd + yrs.service + sex, data = Salaries)
+model <- feols(salary ~ yrs.since.phd + yrs.service + sex, data = Salaries)
 ```
 
 ---
@@ -478,11 +484,14 @@ What else might we want to know?
 
 # Getting R squared
 
-- Well, we can just see it at the bottom of the default `export_summs()` table, that works
-- We can also pull it out from the `summary()` of a model
+- Well, we can just see it at the bottom of the default `etable()` table, that works
+- We can also pull it out using `fitstat()` which can also be used to get all sorts of other statistics
 
 ```{r, echo = TRUE}
-summary(model)$r.squared
+# Look at a summary of the statistic
+fitstat(model, 'r2')
+# Get the actual value out
+fitstat(model, 'r2')$r2
 ```
 
 ---
@@ -490,24 +499,22 @@ summary(model)$r.squared
 # Doing an F test
 
 - We already did one by hand! using the $R^2$ values
-- How about using `linearHypothesis()`?
-- After the model, specify the set restrictions you want in a vector `c('a = 1', 'b = 0', 'c = d')`, etc., referring to the coefficients you want to restrict by their variable names. It will test them all *jointly*
-- Check the `export_summs()` table if you're not sure what the variable names are exactly
-- Don't forget to use `white.adjust = TRUE` if you have heteroskedasticity
+- We can also use `wald()` to test a set of coefficients being jointly 0
+- Or `glht()` in **multcomp** for testing more complex equations, or things not tested against 0 (rearrange the equation to have a constant on one side)
+- To account for heteroskedasticity, you can use `vcov = 'hetero'` in the `feols()` you feed either, or set `vcov` directly in `wald()` (but not `glht`)
 
 ```{r, echo = TRUE, eval = FALSE}
-linearHypothesis(model, c('yrs.since.phd = 0'))
-linearHypothesis(model, c('yrs.since.phd = -yrs.service'))
-linearHypothesis(model, c('yrs.since.phd = 0', 'sexMale = 0'), white.adjust = TRUE)
-
+wald(model, c('X1','X2'))
+glht(model, 'X1 = 3')
+glht(model, 'X1 - X2 = 0')
 ```
 
 ---
 
 # Predictions and Residuals
 
-- We can get a vector of predictions from a regression object with `predict()`
-- And a vector of residuals with `resid()`
+- We can get a vector of predictions from a regression object with `predict()` (or, with `feols()`, optionally `model$fitted.values`)
+- And a vector of residuals with `resid()` or optionally with `feols()`, `model$residuals`
 - This turns out to be handy often in applied work! For example, maybe we want to plot those predicted values or residuals!
 - Although for what we've covered so far it's mostly just good for doing $R^2$ or controlling by hand.
 - Which can be good to get a feel for how this all works. Or just to learn how to use `predict()` and `resid()`
@@ -517,7 +524,7 @@ linearHypothesis(model, c('yrs.since.phd = 0', 'sexMale = 0'), white.adjust = TR
 # Controlling by hand
 
 ```{r, echo = TRUE}
-export_summs(model)
+etable(model)
 ```
 
 ---
@@ -525,13 +532,13 @@ export_summs(model)
 # Controlling by hand
 
 ```{r, echo = TRUE}
-yrs_model <- lm(yrs.since.phd ~ yrs.service + sex, data = Salaries)
-yrs_resid <- yrs_model %>% resid()
-salary_model <- lm(salary ~ yrs.service + sex, data = Salaries)
-salary_resid <- salary_model %>% resid()
+yrs_model <- feols(yrs.since.phd ~ yrs.service + sex, data = Salaries)
+salary_model <- feols(salary ~ yrs.service + sex, data = Salaries)
+my_data <- tibble(yrs_resid = resid(yrs_model),
+                  salary_resid = resid(salary_model))
 
-resid_model <- lm(salary_resid ~ yrs_resid)
-resid_model
+resid_model <- feols(salary_resid ~ yrs_resid, data = my_data)
+etable(resid_model)
 ```
 
 ---
@@ -553,7 +560,7 @@ ggplot(data = Salaries, aes(x = yrs.service, y = resid(model))) +
 # R squared by hand
 
 ```{r, echo = TRUE}
-summary(model)$r.squared
+fitstat(model, 'r2')$r2
 
 
 predicted_values <- predict(model)

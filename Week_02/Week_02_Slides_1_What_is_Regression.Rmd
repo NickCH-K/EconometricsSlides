@@ -448,12 +448,25 @@ lm(circumference ~ age, data = Orange)
 --- 
 ---
 
+
+# Ordinary Least Squares in R
+
+- In this class, we'll be using `feols()` from the **fixest** package instead of `lm()`
+- This doesn't make too much difference now, and the code looks the same so far, but this will help us easily connect to other stuff
+
+```{r, echo = TRUE}
+library(fixest)
+feols(circumference ~ age, data = Orange)
+```
+
+---
+
 # Ordinary Least Squares in R
 
 - What's going on here?
 
 ```{r, eval = FALSE}
-lm(circumference ~ age, data = Orange)
+feols(circumference ~ age, data = Orange)
 ```
 
 - `circumference ~ age` is a *formula* object. It says to take the `circumference` variable and treat that as our dependent variable $(Y)$. Have it vary (`~`) according to `age` (independent variable, $X$)
@@ -465,17 +478,14 @@ lm(circumference ~ age, data = Orange)
 # Ordinary Least Squares in R
 
 - There's lots more information we can get from our regression, but that will wait for later
-- For now, let's just make a nice graph of it using `effect_plot` in the **jtools** library (make sure it's installed first with `install.packages('jtools')`)
+- For now, let's just make a nice graph of it using the **ggplot2** library (which you already got installed when you installed the **tidyverse**)
 
 ```{r, echo = TRUE, eval = FALSE}
-library(jtools)
-my_regression <- lm(circumference ~ age, data = Orange)
-effect_plot(my_regression,
-            pred = age,
-            plot.points = TRUE)
+library(tidyverse) # This loads ggplot2 as well
+ggplot(Orange, aes(x = age, y = circumference)) + 
+  geom_point() + # Draw points
+  geom_smooth(method = 'lm') # add OLS line
 ```
-
-- `effect_plot` need us to *save our regression object* to give it, then tell it what variable we want as our x-axis with `pred`, and if we want the raw data on there, we say `plot.points = TRUE`
 
 ---
 
@@ -484,10 +494,10 @@ effect_plot(my_regression,
 - The result:
 
 ```{r, echo = FALSE, eval = TRUE}
-my_regression <- lm(circumference ~ age, data = Orange)
-effect_plot(my_regression,
-            pred = age,
-            plot.points = TRUE) + 
+library(tidyverse) # This loads ggplot2 as well
+ggplot(Orange, aes(x = age, y = circumference)) + 
+  geom_point() + # Draw points
+  geom_smooth(method = 'lm') + # add OLS line 
   theme_metro_regtitle()
 ```
 

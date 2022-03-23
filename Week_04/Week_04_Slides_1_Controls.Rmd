@@ -24,7 +24,7 @@ library(ggthemes)
 library(dagitty)
 library(gganimate)
 library(ggdag)
-library(jtools)
+library(fixest)
 library(scales)
 library(Cairo)
 library(magick)
@@ -80,6 +80,7 @@ $$Y = \beta_0 + \beta_1X+\varepsilon$$
 $$IceCreamEating = \beta_0 + \beta_1ShortsWearing + \varepsilon$$
 
 - The true $\beta_1$ is probably $0$. But since $Temperature$ is in $\varepsilon$ and $Temperature$ is related to $ShortsWearing$, OLS will mistakenly assign the effect of $Temperature$ to the effect of $ShortsWearing$, making it look like there's a positive effect when there isn't one
+- If $Temperature$ hangs around $ShortsWearing$, but OLS doesn't know about it, OLS will give $ShortsWearing$ all the credit for $Temperature$'s impact on $IceCreamEating$
 - Here we're mistakenly finding a positive effect when the truth is $0$, but it could be anything - negative effect when truth is $0$, positive effect when the truth is a bigger/smaller positive effect, negative effect when truth is positive, etc. etc.
 
 ---
@@ -87,7 +88,7 @@ $$IceCreamEating = \beta_0 + \beta_1ShortsWearing + \varepsilon$$
 # To the Rescue
 
 - One way we can solve this problem is through the use of *control variables* 
-- What if $Temperature$ *weren't* in $\varepsilon$? Then we'd be fine! How do we take it out? Just put it in the model directly!
+- What if $Temperature$ *weren't* in $\varepsilon$? Then we'd be fine! OLS would know how to separate out its effect from the $ShortsWearing$ effect. How do we take it out? Just put it in the model directly!
 
 $$IceCreamEating = \beta_0 + \beta_1ShortsWearing + \beta_2Temperature + \varepsilon$$
 
@@ -110,7 +111,7 @@ $$IceCreamEating = \beta_0 + \beta_1ShortsWearing + \beta_2Temperature + \vareps
 
 - How does this actually work?
 - Controlling for a variable works by *removing variation in $X$ and $Y$ that is explained by the control variable*
-- So our estimate of $\hat{\beta}_1$ is based on *just the variation in $X$ and $Y$ that is unrelated to the control variable
+- So our estimate of $\hat{\beta}_1$ is based on *just the variation in $X$ and $Y$ that is unrelated to the control variable*
 - Any accidentally-assigning-the-value-of-Temperature-to-ShortsWearing can't happen because we've removed the effect of $Temperature$ on $ShortsWearing$ as well as the effect of $Temperature$ on $IceCreamEating$
 - We're asking at that point, *holding $Temperature$ constant*, i.e. *comparing two different days with the same $Temperature$ *, how is $ShortsWearing$ related to $IceCreamEating$?
 - We know we're comparing within the same $Temperature$ because we literally subtracted out all the $Temperature$ differences!
@@ -129,8 +130,8 @@ set.seed(12315)
 tib <- tibble(Z = 1*(rnorm(1000) > 0)) %>%
   mutate(X = Z + rnorm(1000)) %>%
   mutate(Y = 2 + 3*X + 2*Z + rnorm(1000))
-tib %>% lm(Y~X, data = .) %>%
-  export_summs(statistics = c(N = 'nobs'))
+feols(Y~X, data = tib) %>%
+  etable()
 ```
 
 ---
@@ -165,9 +166,8 @@ head(tib)
 What do we get now?
 
 ```{r, echo = TRUE}
-tib %>%
-  lm(Y_res ~ X_res, data = .) %>%
-  export_summs(statistics = c(N = 'nobs'))
+feols(Y_res ~ X_res, data = tib) %>%
+  etable()
 ```
 
 
@@ -178,9 +178,8 @@ tib %>%
 Compare this to actually including `Z` as a control:
 
 ```{r, echo = TRUE}
-tib %>%
-  lm(Y ~ X + Z, data = .) %>%
-  export_summs(statistics = c(N = 'nobs'))
+feols(Y ~ X + Z, data = tib) %>%
+  etable()
 ```
 
 ---
@@ -332,6 +331,7 @@ ggdag_classic(dag,node_size=20) +
 - That way we know what we need to control for to close the paths!
 - Control for any one variable on the path, and suddenly there's no variation from that variable any more - the causal chain is broken and the path is closed!
 - A path counts no matter which direction the arrows point on it (the arrow direction matters but we'll get to that next time)
+- If the path isn't part of what answers our research question, it's a *back door* we want to be closed
 
 ---
 
@@ -369,7 +369,7 @@ ggdag_classic(dag,node_size=10) +
 # Closing Paths
 
 - We want the ways that $Preschool$ causes $Earnings$ - that's the first two, $Preschool \rightarrow Earnings$ and $Preschool \rightarrow Skills \rightarrow Earnings$
-- The rest we want to close! 
+- The rest we want to close! They're *back doors*
 - $Location$ is on #3, so if we control for $Location$, 3 is closed
 - $Background$ is on the rest, so if we control for $Background$, the rest are closed
 - So if we estimate the below OLS equation, $\hat{\beta}_1$ will be unbiased!
@@ -383,7 +383,7 @@ $$Earnings = \beta_0 + \beta_1Preschool + \beta_2Location + \beta_3Background+\v
 - This assumes that *the model we drew was accurate*. Did we leave any important variables or arrows out? Think hard!
 - What other variables might belong on this graph? Would they be on a path that gives an alternate explanation? 
 - Just because we *say* that's the model doesn't magically make it the *actual model!* It needs to be right! Use that economic theory and common sense to think about missing parts of the graph
-- Also, *can* we control for those things. What would it mean to assign a single number for $Background$ to someone? Or if we're representing $Background$ with multiple variables - race, gender, parental income, etc., how do we know if we've fully covered it?
+- Also, *can* we control for those things? What would it mean to assign a single number for $Background$ to someone? Or if we're representing $Background$ with multiple variables - race, gender, parental income, etc., how do we know if we've fully covered it?
 
 ---
 
@@ -413,8 +413,8 @@ tib2 <- data.frame(U1 = rnorm(1000), A = rnorm(1000), B = rnorm(1000)) %>%
   mutate(C = U1 + rnorm(1000), D = U1 + rnorm(1000)) %>%
   mutate(X = A + C + rnorm(1000)) %>%
   mutate(Y = 4*X + A + B + D + rnorm(1000))
-m1 <- lm(Y~X, data = tib)
-m1$coefficients
+m1 <- feols(Y~X, data = tib)
+coef(m1)
 ```
 
 ---
@@ -455,9 +455,9 @@ What do we *need* to control for to close all the paths we don't want? Assume we
 - Remember, the true $\beta_1$ was 4
 
 ```{r}
-m2 <- lm(Y~X + A + C, data = tib2)
-m3 <- lm(Y~X + A + D, data = tib2)
-export_summs(m1,m2,m3)
+m2 <- feols(Y~X + A + C, data = tib2)
+m3 <- feols(Y~X + A + D, data = tib2)
+etable(m1,m2,m3)
 ```
 
 ---

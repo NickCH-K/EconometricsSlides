@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = FALSE, dev.args = list(png = list(type = "cairo")),
 library(tidyverse)
 library(jtools)
 library(scales)
+library(fixest)
 # remotes::install_github('hadley/emo')
 library(emo)
 theme_metro <- function(x) {
@@ -146,11 +147,15 @@ ggplot(bigsamp, aes(x = .)) +
 ```{r, echo = TRUE}
 tib <- tibble(X = runif(100)) %>%
   mutate(Y = 3 + 2*X + rnorm(100))
-model <- lm(Y ~ X, data = tib)
-model
+model <- feols(Y ~ X, data = tib)
+coef(model)
 ```
 
 - All we see is $\hat{\beta}_1 =$ `r number(coef(model)[2],accuracy = .01)`. So... is $\beta_1 = 2$?
+
+```{r}
+model <- lm(Y~X, data = tib)
+```
 
 ---
 
@@ -379,7 +384,7 @@ ggplot(densdat, aes(x=x, y = y)) +
 - When we pick an $\alpha$, like .05 or .1 or .01 or whatever, we're saying "I'm comfortable rejecting the null 5% (or 1%, etc.) of the time even when it's true"
 - Since 5% of the time, you'll get a p-value below .05 even if the null is true, because of sampling variation
 - This is a "false positive"
-- Why not just pick a super lower confidence level so we don't have false positives?
+- Why not just pick a super low confidence level so we don't have false positives?
 
 ---
 
