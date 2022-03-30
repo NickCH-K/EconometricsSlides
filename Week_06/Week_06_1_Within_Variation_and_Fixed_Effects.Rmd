@@ -26,7 +26,6 @@ library(magick)
 library(wooldridge)
 library(dagitty)
 library(ggdag)
-library(jtools)
 library(scales)
 library(Cairo)
 theme_metro <- function(x) {
@@ -366,6 +365,7 @@ ggdag_classic(dag,node_size=10) +
 - And when we do, we automatically *control for all variables that only have between variation*, whatever they are, even if we can't measure them directly or didn't think about them
 - *All that's left is the within variation*
 
+
 ---
 
 # Concept Checks
@@ -388,6 +388,16 @@ ggdag_classic(dag,node_size=10) +
 - How can we actually do this? And what's really going on?
 - Let's first talk about the regression model itself that this implies
 - Then let's actually do the thing. There are two main ways: *de-meaning* and *binary variables* (they give the same result, for balanced panels anyway)
+
+---
+
+# Estimation vs. Design
+
+- To be clear, this is *exactly 0% different* from what we've done before in terms of controlling for stuff
+- And in fact we're about to do the *exact same thing we did before* by just adding a categorical control variable for `county` or whatever
+- (and in fact the "within" thing holds with other categorical controls - a categorical control for education isolates variation "within education levels")
+- The difference is the *reason we're doing it*. It's fixed effects because *a categorical control for individual controls for a lot of stuff*, and we think closes a *lot* of back doors for us, not just one, and not just ones we can measure
+
 
 ---
 
@@ -453,9 +463,9 @@ crime4 <- crime4 %>%
 # And Regress!
 
 ```{r, echo = TRUE}
-orig_data <- lm(crmrte ~ prbarr, data = crime4)
-de_mean <- lm(demeaned_crime ~ demeaned_prob, data = crime4)
-export_summs(orig_data, de_mean)
+orig_data <- feols(crmrte ~ prbarr, data = crime4)
+de_mean <- feols(demeaned_crime ~ demeaned_prob, data = crime4)
+etable(orig_data, de_mean)
 ```
 
 ---
@@ -475,25 +485,22 @@ export_summs(orig_data, de_mean)
 
 - Why does subtracting the within-individual mean of each variable "control for individual"?
 - In a sentence, interpret the slope coefficient in the estimated model $(Y_{it} - \bar{Y}_i) = 2 + 3(X_{it} - \bar{X}_i)$ where $Y$ is "blood pressure", $X$ is "stress at work", and $i$ is an individual person
-- Why do we want to subtract the mean from $X$ as well as $Y$? Doesn't it come out of the error if we take it out of $Y$ anyway? [Hint: the animation may give some intuition here]
 
 ---
 
 # The Least Squares Dummy Variable Approach
 
 - De-meaning the data isn't the only way to do it!
-- (And sometimes it can make the standard errors wonky, since they don't recognize that you've estimated those means)
 - You can also use the least squares dummy variable (another word for "binary variable") method
-- We just treat "individual" like the categorical variable it is and add it as a control!
-- (Interpretation is the same, too... hey, maybe this helps us go back and interpret regressions with categorical variables in them better, too!)
+- We just treat "individual" like the categorical variable it is and add it as a control! Again, the regression approach is exactly the same as with any categorical control, but the *research design* reason for doing it is different
 
 ---
 
 # Let's do it!
 
 ```{r, echo = TRUE}
-lsdv <- lm(crmrte ~ prbarr + factor(county), data = crime4)
-export_summs(orig_data, de_mean, lsdv, coefs = c('prbarr', 'demeaned_prob'))
+lsdv <- feols(crmrte ~ prbarr + factor(county), data = crime4)
+etable(orig_data, de_mean, lsdv, keep = c('prbarr', 'demeaned_prob'))
 ```
 
 ---
@@ -501,7 +508,7 @@ export_summs(orig_data, de_mean, lsdv, coefs = c('prbarr', 'demeaned_prob'))
 # The same!
 
 - The result is the same, as it should be
-- Except for that $R^2$ - why is it so much higher for LSDV?
+- Except for that $R^2$ - What is that "within R2"?
 - Because de-meaning takes out the part explained by the fixed effects ( $\alpha_i$ ) *before* running the regression, while LSDV does it *in* the regression
 - So the .94 is the portion of `crmrte` explained by `prbarr` *and* `county`, whereas the .21 is the "within - $R^2$ " - the portion of *the within variation* that's explained by `prbarr`
 - Neither is wrong (and the .94 isn't "better"), they're just measuring different things
@@ -562,20 +569,18 @@ crime4 %>%
 # Going Professional
 
 - Applied researchers rarely do either of these, and rather will use a command specifically designed for fixed effects
-- In R, there are three big ones: `feols` in **fixest**, `felm` in **lfe**, `plm` in **plm**, or or `lm_robust` in **estimatr**
-- In my opinion `feols` is the clear winner. Plus, **fixest** does all sorts of other neat stuff like fixed effects in nonlinear models like logit, regression tables, joint-test functions, and on and on
+- Like good ol' `feols()`! (what did you think the "fe" part stood for?)
+- Note there are also functions in **fixest** that do fixed effects in non-linear models like logit, probit, or poisson regression (`feglm()` and `fepois()`)
 - Plus, it clusters the standard errors by the first fixed effect by default, which we usually want!
-- (it does put a bunch of extra calculations in our `export_summs` table but we can get rid of those with `statistics=`)
 
 ---
 
 # Going Professional
 
 ```{r, echo = TRUE}
-# If necessary, install.packages('estimatr')
 library(fixest)
 pro <- feols(crmrte ~ prbarr | county, data = crime4)
-export_summs(de_mean, pro, statistics = c(N = 'nobs', R2 = 'r.squared'))
+etable(de_mean, pro)
 ```
 
 ---
@@ -590,15 +595,15 @@ export_summs(de_mean, pro, statistics = c(N = 'nobs', R2 = 'r.squared'))
 3. Anything with only a *little* within variation will have most of its variation washed out too ("effect of population density on crime rate?" probably not)
 4. The estimate pays the most attention to individuals with *lots of variation in treatment*
 
-- 2 and 3 can be addressed by using "random effects" instead but we aren't covering that in this class
+- 2 and 3 can be addressed by using "random effects" instead but we aren't covering that in this class (see the The Effect chapter on Fixed Effects for more)
 
 ---
 
 # Concept Checks
 
 - Why can't we use individual-person fixed effects to study the impact of race on traffic stops?
-- The $R^2$ from a de-meaned fixed effects regression is .3, and from a LSDV regression is .5. Interpret these two numbers in sentences
-- In a sentence, interpret the slope coefficient in the estimated model $(Y_{it} - \bar{Y}_i) = 1 + .5(X_{it} - \bar{X}_i)$ where $Y$ is "school funding per child" and $X$ is "log population growth", and $i$ is city
+- The within $R^2$ from is .3, and the overall $R^2$ is .5. Interpret these two numbers in sentences
+- In a sentence, interpret the slope coefficient in the estimated model $(Y_{it} - \bar{Y}_i) = 1 + .5(X_{it} - \bar{X}_i)$ where $Y$ is "school funding per child" and $X$ is "population growth", and $i$ is city
 
 ---
 

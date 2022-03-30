@@ -277,23 +277,9 @@ df <- df %>%
 
 ---
 
-# Regression in RDD
-
-- The most basic version of RDD allows for a jump but forces the slope to be the same on either side
-- This just changes the intercept to the left or right, i.e. we just include $treated$ as a control!
-- The coefficient on $treated$ is our RDD effect
-
-$$Y = \beta_0 + \beta_1Treated + \beta_2XCentered + \varepsilon$$
-
-```{r}
-lm(Y ~ treated + X_centered, data = df)
-```
-
----
-
 # Varying Slope
 
-- Typically, however, you will want to let the slope vary to either side
+- Typically, you will want to let the slope vary to either side
 - In effect, we are fitting an entirely different regression line on each side of the cutoff
 - We can do this by interacting both slope and intercept with $treated$!
 - Coefficient on Treated is how the intercept jumps - that's our RDD effect. Coefficient on the interaction is how the slope changes
@@ -301,7 +287,7 @@ lm(Y ~ treated + X_centered, data = df)
 $$Y = \beta_0 + \beta_1Treated + \beta_2XCentered + \beta_3Treated\times XCentered + \varepsilon$$
 
 ```{r}
-lm(Y ~ treated*X_centered, data = df)
+feols(Y ~ treated*X_centered, data = df)
 ```
 
 ---
@@ -334,7 +320,7 @@ $$Y = \beta_0 + \beta_1XC + \beta_2XC^2 + \beta_3Treated + \beta_4Treated\times 
 - The coefficient on $Treated$ remains our "jump at the cutoff" - our RDD estimate!
 
 ```{r}
-lm(Y ~ X_centered*treated + I(X_centered^2)*treated, data = df)
+etable(feols(Y ~ X_centered*treated + I(X_centered^2)*treated, data = df))
 ```
 
 ---
@@ -429,12 +415,12 @@ df <- tibble(X = runif(1000)) %>%
 ```
 
 ```{r, echo = TRUE}
-m1 <- lm(Y~treated*X_centered, data = df)
-m2 <- lm(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .25))
-m3 <- lm(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .1))
-m4 <- lm(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .05))
-m5 <- lm(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .01))
-export_summs(m1,m2,m3,m4,m5, statistics = c(N = 'nobs'), coefs = 'treatedTRUE')
+m1 <- feols(Y~treated*X_centered, data = df)
+m2 <- feols(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .25))
+m3 <- feols(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .1))
+m4 <- feols(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .05))
+m5 <- feols(Y~treated*X_centered, data = df %>% filter(abs(X_centered) < .01))
+etable(m1,m2,m3,m4,m5, keep = 'treatedTRUE')
 ```
 
 ---
@@ -590,9 +576,10 @@ df %>%
 
 # Fuzzy Regression Discontinuity
 
-- We can perform this using `feols` from **fixest**, giving it two treatment-response functions
+- We can perform this using the instrumental-variables features of `feols`, giving it two treatment-response functions
 - The first is an RDD specification where we use "treatment" - i.e. whether you were actually treated
 - The second uses the same RDD specification, but replaces "treatment" with "above the cutoff"
+- `feols(outcome ~ controls  | XC*treated ~ XC*assigned_to_treatment)`
 
 ---
 
@@ -604,15 +591,13 @@ df %>%
 predict_treatment <- feols(treatment ~ X_center*above_cut, data = df)
 without_fuzzy <-feols(Y ~ X_center*treatment, data = df)
 fuzzy_rdd <- feols(Y ~ 1 | X_center*treatment ~ X_center*above_cut, data = df)
-
-export_summs(predict_treatment, without_fuzzy, fuzzy_rdd, statistics = c(N = 'nobs'))
+etable(predict_treatment, without_fuzzy, fuzzy_rdd)
 ```
 ---
 
 # Concept Checks
 
 - Why does using a narrow window make the effect estimate noisier?
-- If we see that there appears to be lumping of the running variable, why can't we just fix that by statistically adjusting? 
 - How do we know that, if our treatment variable is fuzzily assigned, we will *underestimate* the effect if we just run a regular RDD, rather than overestimate it?
 - Inuitively, why would we be skeptical that a regression discontinuity run on a very granular running variable is valid?
 

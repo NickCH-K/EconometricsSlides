@@ -26,7 +26,8 @@ library(ggthemes)
 library(directlabels)
 library(ggdag)
 library(estimatr)
-library(jtools)
+library(fixest)
+library(marginaleffects)
 library(scales)
 library(Cairo)
 theme_metro <- function(x) {
@@ -167,7 +168,7 @@ ggplot(tib, aes(x = X, y = D)) +
 
 - Also, OLS requires that the slopes be constant
 - (Not necessarily if you use a polynomial or logarithm, but the following critique still applies)
-- This is *not what we want for binary data!
+- This is *not what we want* for binary data!
 - As the prediction gets really close to 0 or 1, the slope should flatten out to nothing
 - If we predict there's a .50 chance of $D = 1$, a one-unit increase in $X$ with $\hat{\beta}_1 = .03$ would increase that to .53
 - If we predict there's a .99 chance of $D = 1$, a one-unit increase in $X$ with $\hat{\beta}_1 = .03$ would increase that to 1.02...
@@ -312,15 +313,15 @@ ggplot(tib, aes(x = X, y = D)) +
 # Probit and Logit in R
 
 - We can do probit in logit in R fairly easily
-- Instead of using `lm` ("linear model") we use `glm` ("generalized linear model")
+- Instead of using `feols` we use `feglm` ("generalized linear model") (also available is just base-R `glm()`)
 - And we must specify which *kind* of link function we have (`family = 'binomial'` for binary data)
 - And the actual link function (`link = 'logit'`)
-- Note: the `feglm()` function in **fixest** works in almost the exact same syntax but allows for fixed effects, instrumental variables, etc. (don't try to do FE's on your own by hand in probit/logit)
+- Note: One nice thing about `feglm` is that it lets you do fixed effects right. **Don't** do your own fixed effects by de-meaning or adding a bunch of binary controls. It doesn't work well.
 
 ```{r, echo = TRUE}
-lpm <- lm(D~X, data = tib)
-logit <- glm(D~X, family = binomial(link = 'logit'), data = tib)
-probit <- glm(D~X, family = binomial(link = 'probit'), data = tib)
+lpm <- feols(D~X, data = tib)
+logit <- feglm(D~X, family = binomial(link = 'logit'), data = tib)
+probit <- feglm(D~X, family = binomial(link = 'probit'), data = tib)
 ```
 
 ---
@@ -330,7 +331,7 @@ probit <- glm(D~X, family = binomial(link = 'probit'), data = tib)
 From this we get... uh... hmm, what does this mean? Why are logit and probit so different if it doesn't matter which you use?
 
 ```{r}
-export_summs(lpm, logit, probit, model.names = c("LPM", "Logit", "Probit"))
+etable(lpm, logit, probit, headers = c("LPM", "Logit", "Probit"))
 ```
 
 ---
@@ -415,17 +416,30 @@ MEM is easier to calculate (and often easier to interpret), but the AME is gener
 
 There are a few standard ways in R to estimate marginal effects, none are perfect.
 
-We can calculate the individual marginal effects using `marginal_effects` and the MER and AME easily using `margins` in the **margins** package (`margins` can also be used to make MEM but you basically just calculate the means yourself and use that for a MER). The `marginaleffects` function in the **marginaleffects** package works similarly.
+We can calculate the individual marginal effects using `marginaleffects()` and the MER and AME easily using `summary(marginaleffects())` in the **marginaleffects** package. 
 
 ```{r, echo = TRUE}
-library(margins)
+library(marginaleffects)
 data(gss_cat, package = 'forcats')
 # Eliminate unused level
-gss_cat <- gss_cat %>% mutate(race = factor(race))
-marriedlogit <- glm(I(marital == 'Married') ~ age*tvhours + race, data = gss_cat)
-# At specific values: margins(marriedlogit, at = list(age = 30:35, tvhours = 3)). Or, AMEs:
-summary(margins(marriedlogit))
+gss_cat <- gss_cat %>% mutate(race = factor(race)) %>% na.omit()
+marriedlogit <- feglm(I(marital == 'Married') ~ age*tvhours + race, data = gss_cat)
+# AME below
+summary(marginaleffects(marriedlogit))
 ```
+
+---
+
+# Marginal Effects in R
+
+You can get MER or MEMs using the `datagrid()` function. `datagrid()` by itself will give you the MEMs. Or `datagrid(varaible=value, grid.type = 'counterfactual')` will set just the values you want while retaining the original data.
+
+```{r, echo = TRUE}
+# MEM would be: summary(marginaleffects(marriedlogit, datagrid()))
+# Get the effect at a tvhours value of 2 and an age of 50
+summary(marginaleffects(marriedlogit, datagrid(age  =50, tvhours = 2, grid.type = 'counterfactual')))
+```
+
 
 ---
 
@@ -440,7 +454,7 @@ Upsides of this approach:
 
 Downsides:
 
-- As of this writing, to use with `export_summs()` you must first install the development version of **broom** with `remotes::install_github('tidymodels/broom')`. Easy fix there.
+- Doesn't work with `etable()`. You'll need another regression-table function like `export_summs()` in **jtools**
 - Because of the last point in "upsides", doesn't allow you to evaluate interaction effects (although this is also a plus because you probably don't actually want to do that - we'll get to this in the assigned paper for next week)
 - Can be finicky to use
 
@@ -459,19 +473,7 @@ Downsides:
 - How can we calculate hypothesis tests for our logit and probit models?
 - For single coefficients, we can just use the standard t-statistics that are reported in the regression output
 - For multiple coefficients, we need to compare the full model to a restricted model!
-- We can just use `linearHypothesis()` as normal, although this doesn't do a likelihood ratio test like the book recommends
-- The models are estimated using maximum likelihood, so a likelihood ratio test makes sense. We can do this with `lrtest()` in **lmtest**
-
----
-
-# Hypothesis Testing (briefly!)
-
-```{r, echo = TRUE}
-library(lmtest)
-# Estimate the restricted model ourselves
-marriedlogit_norace <- glm(I(marital == 'Married') ~ age*tvhours, data = gss_cat)
-lrtest(marriedlogit, marriedlogit_norace)
-```
+- We can just use `wald()` as normal
 
 ---
 

@@ -351,6 +351,16 @@ animate(p,nframes=150)
 
 ---
 
+# Design vs. Regression
+
+- Like with fixed effects, there is a distinction between *regression model* and *research design*
+- We have a model with an interaction term
+- Not all models with interaction terms are DID!
+- It's DID because it's an interaction between treated/control and before/after
+- If you don't have a before/after, or you don't have a control group, that same setup may tell you something interesting but it won't be DID!
+
+---
+
 # Example
 
 - The Earned Income Tax Credit was increased in 1993. This may increase chances single mothers (treated) return to work, but likely not affect single non-moms (control)
@@ -385,8 +395,8 @@ means <- df %>%
 
 # Let's try OLS!
 ```{r, echo = TRUE}
-lm(work ~ after*treated, data = df) %>%
-  export_summs(digits = 3)
+did_reg <- feols(work ~ after*treated, data = df)
+etable(did_reg, digits = 3)
 ```
 
 ---
@@ -413,6 +423,7 @@ lm(work ~ after*treated, data = df) %>%
 - We can extend this to having more than two groups, some of which get treated and some of which don't
 - And more than two time periods! Multiple before and/or multiple after
 - We don't have a full set of interaction terms, we still only need the one, which we can now call $CurrentlyTreated_{it}$
+- **If you have more than two groups and/or more than two time periods, then this is what you should be doing**
 
 ---
 
@@ -437,8 +448,9 @@ did_data
 # More!!
 
 ```{r, echo = TRUE}
-feols(Outcome ~ CurrentlyTreated | group + time, data = did_data) %>%
-  export_summs(statistics = c(N = 'nobs'))
+# Put group first so the clustering is on group
+many_periods_did <- feols(Outcome ~ CurrentlyTreated | group + time, data = did_data)
+etable(many_periods_did)
 ```
 
 
@@ -471,7 +483,7 @@ feols(Outcome ~ CurrentlyTreated | group + time, data = did_data) %>%
 
 ---
 
-# Parallel Trends
+# Prior Trends
 
 - Let's see how that EITC example looks in the leadup to 1994
 - They look like the gap between them is pretty constant before 1994! They move up and down but the *gap* stays the same. That's good.
@@ -495,7 +507,7 @@ df %>%
 
 ---
 
-# Parallel Trends
+# Prior Trends
 
 - Formally, prior trends being the same tells us nothing about parallel trends
 - But it can be suggestive. Going back to the height pill example, what if instead of comparing Adelaide and Bella, child twins, we compared Adelaide to *me*? 
@@ -532,7 +544,6 @@ ggplot(df, aes(x = Time, y = Height, group = Person, label = Person)) +
 
 - Go back to the Seattle minimum wage effect example from the first Concept Check slide. Clearly state what the parallel trends assumption means in this context.
 - It's possible (although perhaps unlikely) that parallel trends can hold even if it looks like the treatment and control groups were trending apart before treatment went into effect. How is this possible?
-- Some approaches to DID help ease the parallel trends assumption by "controlling for trend" - adjusting for the post-treatment jumps the treatment and control groups would have been expected to have based on their trends before treatment. When would this work? When would this not work?
 
 ---
 
