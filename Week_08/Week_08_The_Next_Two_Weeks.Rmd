@@ -53,17 +53,17 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width 
 
 The four topics are:
 
-- Randomized Experiments (Bailey Ch. 10)
-- Regression Discontinuity (Bailey Ch. 11)
-- Instrumental Variables (Bailey Ch. 9)
-- Limited Dependent Variables (Bailey Ch. 12)
+- Randomized Experiments 
+- Regression Discontinuity
+- Instrumental Variables
+- Limited Dependent Variables
 - (Time series would be a good option here too, but it's already covered in the other metrics class in the sequence!)
 
 ---
 
 # How Can We Pick?
 
-- Check out the related book chapter and see if you like what you see
+- Check out the related book material and see if you like what you see
 - Also let's ask: who is each topic good for?
 
 ---

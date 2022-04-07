@@ -231,7 +231,7 @@ knitr::include_graphics('opera_study.png')
 
 - There are a lot of calculators out there that will do these actual calculations for you, like [PowerandSampleSize](http://powerandsamplesize.com) or [G*Power](https://www.psychologie.hhu.de/arbeitsgruppen/allgemeine-psychologie-und-arbeitspsychologie/gpower.html), which is what I use
 - Another great method, especially with more complex experiments, is to use simulation - randomly generate data with the properties you expect your data to have, see if you find an effect, then repeat thousands of times. Proportion of times you get a significant effect = your power. Standard deviation of the effect = standard error. Look back to our lectures on sampling variation to see some examples
-- I will post a guide sheet on how to use these tools
+- The textbook walks you through this
 
 ---
 
@@ -256,7 +256,7 @@ knitr::include_graphics('opera_study.png')
 
 # How Much?
 
-- According to the [PowerandSampleSize](http://powerandsamplesize.com) "Compare two means two-sided inequality" calculator, we need **56,397** people in our study. To only have an 80% chance it works *if* we're right about how big the effect is! FOr a 90% chance it's 75,550. 
+- According to the [PowerandSampleSize](http://powerandsamplesize.com) "Compare two means two-sided inequality" calculator, we need **56,397** people in our study. To only have an 80% chance it works *if* we're right about how big the effect is! For a 90% chance it's 75,550. 
 - Ouch.
 - This is because we expect the effect to be tiny. Statistical properties of tiny effects are really bad y'all. Beware!
 - Maybe we can only afford 2,000 people. Then we can ask what's the "minimum detectable effect" (MDE) - i.e., how big does the effect *need to be in truth* for us to have a good chance of finding it?
@@ -321,7 +321,7 @@ knitr::include_graphics('opera_study.png')
 - Just compare the treated and untreated groups. Done! No back doors to close, ideally
 
 ```{r, eval = FALSE, echo = TRUE}
-lm(outcome ~ treatment, data = experimentdata)
+feols(outcome ~ treatment, data = experimentdata)
 ```
 
 - Treatment is binary (or categorical if we have multiple treatments), we know how to interpret that!
@@ -372,13 +372,13 @@ experimentdata <- experimentdata %>%
 Check whether it's higher/lower in the treated/untreated group:
 
 ```{r, eval = FALSE, echo = TRUE}
-lm(attrition ~ treatment, data = experimentdata)
+feols(attrition ~ treatment, data = experimentdata)
 ```
 
 Check whether it's different in treated/untreated *for a specific group* - this could be some pre-experiment demographic group like gender, or could be some early outcome, like "people who rated their experience lower after the first week of the experiment"
 
 ```{r, eval = FALSE, echo = TRUE}
-lm(attrition ~ treatment*gender, data = experimentdata)
+feols(attrition ~ treatment*gender, data = experimentdata)
 ```
 
 ---
@@ -492,7 +492,7 @@ tb <- tibble(assignment = sample(c(TRUE,FALSE),1000, replace = TRUE)) %>%
   # True effect is 2
   mutate(outcome = 2*treatment + 3*rnorm(1000))
 # Intent-to-treat
-itt <- lm(outcome ~ treatment, data = tb)
+itt <- feols(outcome ~ treatment, data = tb)
 # 2sls to adjust for compliance
 twosls <- feols(outcome ~ 1 | treatment ~ assignment, data = tb)
 # Do the scaling by hand (since this is a simple case)
@@ -508,7 +508,7 @@ scaled <- assignment_effect/treatment_increase
 ```{r, echo = TRUE}
 c(assignment_effect, treatment_increase, scaled)
 
-export_summs(itt, twosls, statistics = c(N = 'nobs'))
+etable(itt, twosls)
 ```
 
 ---

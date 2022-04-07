@@ -59,10 +59,10 @@ pre[class] {
 
 # Getting Set Up
 
-- We can install R at [R-project.org](R-project.org)
-- Then we can download and install RStudio at [RStudio.com](Rstudio.com)
+- We can install R at [R-project.org](http://R-project.org)
+- Then we can download and install RStudio at [RStudio.com](http://Rstudio.com)
 - Then, R is installed and ready to go! Open up RStudio to get going
-- Alternately, you can skip installing anything and use [RStudio.cloud](RStudio.cloud) which runs entirely in the browser but is a bit slower and requires a (free) account
+- Alternately, you can skip installing anything and use [RStudio.cloud](http://RStudio.cloud) which runs entirely in the browser but is a bit slower and requires a (free) account
 - **If you installed R a while ago, please reinstall it. I'd like everyone to have 4.1 or newer.**
 
 ---

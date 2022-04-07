@@ -372,7 +372,6 @@ ggdag_classic(dag, size = 5) +
 
 - Let's visit this site all about "spurious" correlations (i.e. correlations that almost certainly do not reveal a true effect of one variable on the other): [https://tylervigen.com/spurious-correlations](https://tylervigen.com/spurious-correlations)
 - Take a look at how easy it is to find variables that are *related* statistically, even though clearly neither causes the other
-- Click "Discover a correlation" at the bottom. Play with it and find a correlation.
 - Do you think this correlation is an example of inferential error (just random chance) or identification error (truly *related*, but not because one causes the other)? Why?
 
 ---

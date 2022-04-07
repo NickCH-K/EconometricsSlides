@@ -238,11 +238,11 @@ $$Y = \beta_0 + \beta_1\hat{X_1} + \beta_2X_2 + \varepsilon$$
 We can do this in R by hand (although as mentioned, the SEs will be wrong)
 
 ```{r, eval = FALSE, echo = TRUE}
-first_stage <- lm(X1 ~ Z + X2, data = df)
+first_stage <- feols(X1 ~ Z + X2, data = df)
 df <- df %>%
   mutate(predict_X1 = predict(first_stage))
 
-second_stage <- lm(Y ~ predict_X1 + X2, data = df)
+second_stage <- feols(Y ~ predict_X1 + X2, data = df)
 ```
 
 ---
@@ -251,7 +251,7 @@ second_stage <- lm(Y ~ predict_X1 + X2, data = df)
 
 There are a bunch of ways to do it properly in R. The classic is `ivreg` in the **AER** package, but other functions are more fully-featured, including robust SEs, clustering, and fixed effects if you want them. `felm` in **lfe**, `tsls` in **sem**, a number of things in **ivpack**
 
-We'll be using `feols` from **fixest**
+We'll be using good ol' `feols` from **fixest**
 
 ```{r, eval = FALSE, echo = TRUE}
 iv_regression <- feols(Y ~ X2 | X1 ~ Z, data = df, se = 'hetero')
@@ -272,7 +272,7 @@ iv_regression$iv_first_stage
 # Concept Checks
 
 - Why do you think that doing 2SLS by hand would make the standard errors be wrong?
-- Intuitively, why would using Z-predicted values of X in predicting Y give us an instrumental variables estimate?
+- Intuitively, why would using Z-predicted values of X in predicting Y give us the causal effect if Z is a valid instrument?
 - Why do we include the control variables in both the first and second stages?
 
 ---
@@ -465,7 +465,7 @@ $$X_1 = \gamma_0 + \gamma_1Z_1 + \gamma_2Z_2 + \gamma_3X_2 + \nu$$
 
 $$Y = \beta_0 + \beta_1\hat{X_1} + \beta_2X_2 + \varepsilon$$
 
-or in R, `iv_robust(Y ~ X1 + X2 | Z1 + Z2 + X2, data = df)`
+or in R, `feols(Y ~ X2 | X1 ~ Z1 + Z2 + X2, data = df)`
 
 (we can add as many instruments as we want as long as we have valid ones! Some modern methods use *hundreds* of instruments and use machine learning to pick between them)
 
@@ -494,7 +494,7 @@ Why would we do this?
 
 # Overidentification Tests
 
-- We can do this using `diagnostics = TRUE` in `iv_robust` again
+- We can do this using `fitstat()` in **fixest**
 
 ```{r, echo = FALSE}
 set.seed(1000)
