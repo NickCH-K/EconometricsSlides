@@ -549,12 +549,17 @@ ggplot(df, aes(x = Time, y = Height, group = Person, label = Person)) +
 
 # And a Warning!
 
-- One other note about DID is that its popularity is relatively recent, as things go, so we're still learning a lot about it!
-- Most relevant has to do with *staggered rollout DID*
-- You may have noticed that the OLS version of DID doesn't *necessarily* need to have treatment applied at *one* particular time
-- Say Washington gets treated in 2017, then California in 2018 - we can use these both as Treated groups and just use the same two-way fixed effects, right?
-- Well... that's what we thought for a long time. And you'll see a LOT of published studies doing this. But it turns out to actually bias results by quite a lot
-- There are more complex modern estimators for staggered rollout DID (say, in the **did** package), but they're a bit much to go into for this class
+- DID is so nice and simple that it feels like you can get real flexible with it
+- But the stuff we're covering in this class - up to TWFE, *relies very strongly* on the assumptions we made. If you break them, the *research design* may hold up, *but the estimator really doesn't* and you need a different estimator
+
+---
+
+# And a Warning! 
+
+- TWFE *does not work if different groups get treated at different times* (try: Callaway & Sant'anna (R **did**) or Wooldridge (R **etwfe**))
+- If you need to control for stuff to support parallel trends, *just tossing controls in a TWFE doesn't work* (try **did** again, or Sant'anna and Zhao **DRDID**)
+- If the outcome is binary, you can't just run TWFE but with logit/probit (just do LPM)
+- If the effect gets stronger or weaker over time, the TWFE effect will be weird (do "dynamic DID", see the textbook)
 - For now, stick to DID designs where all the Treated groups are treated in the same period
 
 ---

@@ -527,6 +527,6 @@ etable(itt, twosls)
 
 To complete the module (due by the end of the second-to-last week of class):
 
-- Do the Experiments Swirl
+- Do the Experiments Swirl lesson
 - Do the Experiments homework
 - Read the assigned paper and answer the questions

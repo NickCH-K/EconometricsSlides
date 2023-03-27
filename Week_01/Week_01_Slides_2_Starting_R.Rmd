@@ -63,7 +63,7 @@ pre[class] {
 - Then we can download and install RStudio at [RStudio.com](http://Rstudio.com)
 - Then, R is installed and ready to go! Open up RStudio to get going
 - Alternately, you can skip installing anything and use [RStudio.cloud](http://RStudio.cloud) which runs entirely in the browser but is a bit slower and requires a (free) account
-- **If you installed R a while ago, please reinstall it. I'd like everyone to have 4.1 or newer.**
+- **If you installed R and/or RStudio a while ago, please reinstall it. I'd like everyone to have 4.1 or newer and the newest version of RStudio.**
 
 ---
 
@@ -73,7 +73,6 @@ pre[class] {
 - Environment Pane
 - Browser Pane
 - Source Editor
-- Li'l tip: Ctrl/Cmd + Shift + number will maximize one of these panes
 
 ---
 
@@ -237,13 +236,12 @@ vtable(iris)
 
 ---
 
-# RMarkdown
+# Quarto
 
-- Go File $\rightarrow$ New File $\rightarrow$ RMarkdown to create a new RMarkdown document
+- Go File $\rightarrow$ New File $\rightarrow$ Quarto to create a new Quarto document
 - A text document with some basic layout, for example hashtags for sectioning
-- Include formatted code with backticks
-- Backtick followed by `r` to make it *execute*
-- Triple backticks for not-inline code chunk. Let's look!
+- Include code chunks with / - these execute when you Render the document to Word, PDF, or HTML
+- can also include code in-line with single backticks and an `r`
 
 ---
 

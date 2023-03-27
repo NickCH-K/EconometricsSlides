@@ -98,7 +98,7 @@ We call these continuous variables "Running variables" because we *run along the
 
 # Regression Discontinuity
 
-- But wait, hold on, if treatment is driven by running variables, won't we have a back door going through those very samerunning variables?? Yes! 
+- But wait, hold on, if treatment is driven by running variables, won't we have a back door going through those very same running variables?? Yes! 
 - And we can't just control for RunningVar because that's where all the variation in treatment comes from. Uh oh!
 
 ```{r, dev = 'CairoPNG'}
@@ -221,7 +221,7 @@ animate(p,nframes=175)
 
 # Concept Checks
 
-- Why is it important that we look as norrowly as possible around the cutoff? What does this get us over comparing the entire treated and untreated groups?
+- Why is it important that we look as narrowly as possible around the cutoff? What does this get us over comparing the entire treated and untreated groups?
 - Can you think of an example of a treatment that is assigned at least partially on a cutoff?
 - Why can't we just control for the running variable as we normally would to solve the endogeneity problem?
 

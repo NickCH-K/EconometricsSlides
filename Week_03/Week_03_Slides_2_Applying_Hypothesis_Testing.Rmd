@@ -195,7 +195,7 @@ ggplot(dnt, aes(x = x, y = y)) +
 
 # The t-distribution
 
-- So, for smaller samples, it's a good idea to use the critical value from a t distribution than from a normal
+- So, for smaller samples, it's a good idea to use the critical value from a t distribution instead of a normal
 - We do the same subtract-the-mean-and-divide-by-s.e. steps, just now we call it a t-score rather than a z-score
 - How can we find the critical values of the t distribution? Don't bother memorizing, as they change depending on your sample size. Instead use a function that measures the proportion of the distribution weirder than a value, and take the inverse to get the critical value!
 
@@ -337,7 +337,7 @@ ggplot(dfd2, aes(x = x, y = y)) +
 - Rather than switching to a normal null for big samples, it will keep using t, but with large samples that's basically normal anyway
 - `feols()` and show us the t-statistic, standard error, and p-value compared to 0 (and can adjust for heteroskedasticity and clustering if you want!).
 - `etable()` will default to standard error, but `etable(coefstat = 'confint')` can give you confidence intervals
-- Both will report "stars" - if the p-value is below a certain $alpha$, you get stars! Be careful - the defaults are different in `feols()` by itself (`r '*'`) = .05) and `etable()` (`r '**'` = .05)
+- Both will report "stars" - if the p-value is below a certain $alpha$, you get stars! Be careful - the defaults are different in `feols()` (`r '*'`) = .05) than is standard in economics papers (`r '**'` = .05)
 
 ---
 

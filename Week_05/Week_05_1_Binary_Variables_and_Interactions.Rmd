@@ -88,6 +88,18 @@ We will look at three features of the right-hand side
 
 ---
 
+# The Overriding Key Concept
+
+**The derivative** is magical here
+
+- $\partial Y/\partial X$ will give you an expression that tells you the effect of a change in $X$ on $Y$
+- Whatever form $X$ enters the equation as!
+- (then if it's binary, imagine that as a change from 0 to 1, or off to on)
+- If you're confused **try taking the derivative, I'm serious, it helps**
+- Your options with this stuff: EITHER commit to memory a bunch of different interpretation rules for each different case, OR just take the darn derivative
+
+---
+
 # Binary Data
 
 - A variable is binary if it only has two values - 0 or 1 (or "No" or "Yes", etc.)
@@ -392,7 +404,7 @@ So at $X = 0$, the effect of a one-unit change in $X$ is $\beta_1$. At $X = 1$, 
 # Polynomials in R
 
 - We can add an `I()` function to our regression to do a calculation on a variable before including it. So `I(X^2)` adds a squared term
-- There's also a `poly()` function but avoid it - it does something slightly different
+- There's also a `poly()` function but you **must** set `raw=TRUE` if you do
 
 ```{r, echo = TRUE, eval = FALSE}
 # Linear
@@ -401,6 +413,7 @@ feols(Y ~ X, data = df)
 feols(Y ~ X + I(X^2), data = df)
 # Cubic
 feols(Y ~ X + I(X^2) + I(X^3), data = df)
+feols(Y ~ poly(X, 3, raw = TRUE), data = df)
 ```
 
 ---
@@ -487,7 +500,7 @@ Downsides:
 - Logarithms require that all data be positive. No negatives or zeroes!
 - Fairly rare that a variable with negative values wants a log anyway
 - But zeroes are common! A common practice is to just do $log(X+1)$ or $asinh(X)=\ln(X+\sqrt{X^2+1})$ but these are pretty arbitrary
-- On the left-hand side at least, better to deal with 0s is Poisson regression
+- On the left-hand side at least, better to deal with 0s with Poisson regression
 
 ---
 

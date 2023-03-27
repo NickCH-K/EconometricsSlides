@@ -318,7 +318,7 @@ ggdag_classic(dag,node_size=10) +
 
 - For each of these variables we can ask if they vary *between groups* and/or *within groups*
 - LocalStuff is all the stuff unique to that county - geography, landmarks, the quality of the schools, almost by definition this only varies *between groups*. It's not like the things that make your county unique are different each year (or at least not very different)
-- Whether the county has LawAndOrder and how many CivilRights you're allowed might change a bit year to year, but in general, political climates like that change pretty slowly. At a bit of a stretch we can call that something that only varies between groups too
+- Whether the county has LawAndOrder and how many CivilRights you have might change a bit year to year, but in general, political climates like that change pretty slowly. At a bit of a stretch we can call that something that only varies between groups too
 - Police budgets (and thus number of police on the streets) and Poverty (which varies with the economy) vary both between counties, but also *within* counties from year to year
 - Variables with between variation only (by our assumption): LocalStuff, LawAndOrder, CivilRights
 - Variables with both between and within variation: Police, Poverty
@@ -372,7 +372,7 @@ ggdag_classic(dag,node_size=10) +
 
 - For each of these variables, would we expect them to have within variation, between variation, or both?
 - (Individual = person) How a child's height changes as they age.
-- (Individual = person) In a data set tracking many people over many years, the variation in the number of children a person has in a given year.
+- (Individual = person) In a data set tracking many people over many years, the variation in the number of children a person has over their lifetime.
 - (Individual = city) Overall, Paris, France has more restaurants than Paris, Texas.
 - (Individual = genre) The average pop music album sells more copies than the average jazz album
 - (Individual = genre) Miles Davis' *Kind of Blue* sold very well *for a jazz album*.

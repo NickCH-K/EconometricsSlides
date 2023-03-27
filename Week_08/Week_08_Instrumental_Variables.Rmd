@@ -28,7 +28,6 @@ library(ggthemes)
 library(directlabels)
 library(ggdag)
 library(fixest)
-library(jtools)
 library(scales)
 library(Cairo)
 theme_metro <- function(x) {
@@ -522,7 +521,7 @@ fitstat(iv, 'sargan')
 iv1 <- feols(Y~ 1 | X ~ Z1, data = df)
 iv2 <- feols(Y~ 1 | X ~ Z2, data = df)
 
-export_summs(iv1, iv2, statistics = c(N = 'nobs'))
+etable(iv1, iv2)
 ```
 
 ---

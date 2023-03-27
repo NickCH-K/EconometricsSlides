@@ -425,7 +425,7 @@ data(gss_cat, package = 'forcats')
 gss_cat <- gss_cat %>% mutate(race = factor(race)) %>% na.omit()
 marriedlogit <- feglm(I(marital == 'Married') ~ age*tvhours + race, data = gss_cat)
 # AME below
-summary(marginaleffects(marriedlogit))
+summary(slopes(marriedlogit))
 ```
 
 ---
@@ -437,7 +437,7 @@ You can get MER or MEMs using the `datagrid()` function. `datagrid()` by itself 
 ```{r, echo = TRUE}
 # MEM would be: summary(marginaleffects(marriedlogit, datagrid()))
 # Get the effect at a tvhours value of 2 and an age of 50
-summary(marginaleffects(marriedlogit, datagrid(age  =50, tvhours = 2, grid.type = 'counterfactual')))
+summary(slopes(marriedlogit, datagrid(age  =50, tvhours = 2, grid.type = 'counterfactual')))
 ```
 
 
@@ -449,14 +449,14 @@ Upsides of this approach:
 
 - Same function works for many different models
 - Easy to get AMEs, easy to get margins for each observation, or at particular values. Also, AME by default!
-- Plot the marginal effect easily with `plot(margins())`
+- Plot the marginal effect easily with `plot_cap()` or `plot_slopes()`
 - Incorporates interactions into the marginal effect, which is averaged, which makes sense!
 
 Downsides:
 
 - Doesn't work with `etable()`. You'll need another regression-table function like `export_summs()` in **jtools**
 - Because of the last point in "upsides", doesn't allow you to evaluate interaction effects (although this is also a plus because you probably don't actually want to do that - we'll get to this in the assigned paper for next week)
-- Can be finicky to use
+- Package author willing to change syntax in future
 
 ---
 

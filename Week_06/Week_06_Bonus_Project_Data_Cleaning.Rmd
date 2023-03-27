@@ -85,12 +85,12 @@ That's it.
 # Reading in the Google Trends data
 
 - Use `list.files()`, probably with the `full.names = TRUE` option, to create a vector of filenames of all the `trends_up_to_` files are
-- Give `map_df()` from the **purrr** package your vector of filenames and a CSV reading function (**Note:** the `read_csv()` function from the **tidyverse** is basically always better than `read.csv()`, and will help you avoid issues).
-- `map_df()` will apply the `read_csv()` function to each of your files and so read them in. Then, because you're using the `_df` version of `map`, it will stack them all on top of each other to give you a single data set of Google Trends data. Done!
+- Then, use `import_list()` in the **rio** package to read in that vector of filenames, using `rbind = TRUE` to bind all the results together into a single dataset
 
 ---
 
 # Aggregating the Google Trends data
+
 Getting date data:
 
 - You're probably going to want to get an actual date variable to do aggregation and modeling. `monthorweek` is a string
@@ -114,8 +114,8 @@ Aggregating
 
 # Reading in the Scorecard data
 
-- You can just use `read_csv()` to read in the Scorecard data (`'Most+Recent+Cohorts+(Scorecard+Elements)'`). The dictionary file you can also read in if you like, although you're probably just better off opening that in Excel to read it - you're going to use that to figure out what all the variables are but you're not going to use the dictionary in analysis.
-- You can also use `read_csv()` to read in the `id_name_link` file.
+- You can just use `import()` to read in the Scorecard data (`'Most+Recent+Cohorts+(Scorecard+Elements)'`). The dictionary file you can also read in if you like, although you're probably just better off opening that in Excel to read it - you're going to use that to figure out what all the variables are but you're not going to use the dictionary in analysis.
+- You can also use `import()` to read in the `id_name_link` file.
 
 ---
 
@@ -142,4 +142,5 @@ Ta-da, you have usable data!
 
 - Remember, your goal here is to see how the Scorecard shifted interest between high- and low-earnings colleges
 - This is inherently asking *how the effect of the Scorecard was different* between these different kinds of colleges. What does this sound like?
+- Note you are *not* trying to see how Google Trends interest differs between high- and low-earnings colleges, nor are you trying to see how Google Trends *in aggregate* changed from before to after
 - There are many "right answers" of how to analyze this, but whatever method you use needs to allow for that key result

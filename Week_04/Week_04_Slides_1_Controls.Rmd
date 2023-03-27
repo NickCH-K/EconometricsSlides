@@ -389,7 +389,7 @@ $$Earnings = \beta_0 + \beta_1Preschool + \beta_2Location + \beta_3Background+\v
 
 # And the Bad News...
 
-- Regardless, this is the kind of thinking we have to do to figure out how to identify things by controlling for variables
+- Regardless, this is the kind of thinking (whether or not you do that thinking *with a causal diagram*) we have to do to figure out how to identify things by controlling for variables
 - There's no way to get around having to make these sorts of assumptions if we want to identify a causal effect
 - Really! No way at all! Even experiments have assumptions
 - The key is not avoiding assumptions, but making sure they're reasonable, and verifying those assumptions where you can
