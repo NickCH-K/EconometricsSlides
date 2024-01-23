@@ -92,7 +92,7 @@ $$IceCreamEating = \beta_0 + \beta_1ShortsWearing + \varepsilon$$
 
 $$IceCreamEating = \beta_0 + \beta_1ShortsWearing + \beta_2Temperature + \varepsilon$$
 
-- Now we have a *multivariate* regression model. Our estimate $\hat{\beta}_1$ will *not* be biased by $Temperature$ because we've controlled for it
+- Now we have a *multivariable* regression model. Our estimate $\hat{\beta}_1$ will *not* be biased by $Temperature$ because we've controlled for it
 
 <span style = "font-size: small">(probably more accurate to say "covariates" or "variables to adjust for" than "control variables" and "adjust for" rather than "control for" but hey what are you gonna do, "control" is standard)</span>
 
@@ -403,7 +403,7 @@ $$Earnings = \beta_0 + \beta_1Preschool + \beta_2Location + \beta_3Background+\v
 - Let's figure out how to draw the causal diagram for this data generating process!
 - (note: `U1`, `U2`, etc., often stand in as an unobserved common cause for two variables that are *correlated* but we think neither causes the other)
 
-````{r, echo = FALSE}
+```{r, echo = FALSE}
 set.seed(1234)
 ```
 

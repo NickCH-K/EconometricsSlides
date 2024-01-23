@@ -1,5 +1,5 @@
 ---
-title: "Multivariate Regression"
+title: "Multivariable Regression"
 date: "Updated `r Sys.Date()`"
 output:
   xaringan::moon_reader:
@@ -28,8 +28,6 @@ library(fixest)
 library(scales)
 library(Cairo)
 library(magick)
-# remotes::install_github('hadley/emo')
-library(emo)
 theme_metro <- function(x) {
   theme_classic() + 
   theme(panel.background = element_rect(color = '#FAFAFA',fill='#FAFAFA'),
@@ -54,7 +52,7 @@ theme_metro_regtitle <- function(x) {
 
 # Controls
 
-- Last time we talked about multivariate regression and controlling for variables
+- Last time we talked about multivariable regression and controlling for variables
 - If our $X$ of interest is related to the error term, we have endogeniety, and the mean of the sampling variation of $\hat{\beta}_1$ won't be $\beta_1$ (i.e. it's biased)
 - If we can figure out all the *other reasons* why $X$ and $Y$ might be related, the back doors. And we can close those back doors to identify our effect by controlling for variables along those back door paths
 - We draw a causal diagram and list the paths
@@ -66,7 +64,7 @@ theme_metro_regtitle <- function(x) {
 
 - Today we're going to talk more about controlling
 - Including when you *don't* want to control for things
-- We'll also talk about how to actually perform multivariate regression
+- We'll also talk about how to actually perform multivariable regression
 - As well as do some things that go along with it (those F-statistics will finally be useful!)
 
 ---
@@ -302,7 +300,7 @@ In each case, we're controlling for something we shouldn't. Is this a case of wa
 
 # Goodness of Fit
 
-- Let's switch gears a bit and talk about some of the statistical aspects of multivariate regression
+- Let's switch gears a bit and talk about some of the statistical aspects of multivariable regression
 - One is the *goodness of fit*. That is, OLS does as good a job as possible of using $X$ and controls to explain $Y$, but how good a job does it do?
 - If the residuals are really big, then there's a lot of noise in $Y$ we're not explaining!
 - If they're small, then most of what's going on in $Y$ is accounted for
@@ -462,7 +460,7 @@ glht(unrestricted, 'yrs.since.phd + yrs.service = 0') %>% summary()
 
 ---
 
-# Multivariate OLS in R
+# Multivariable OLS in R
 
 - Conveniently, adding more variables to an OLS model in R is just an issue of... literally adding them
 
@@ -472,7 +470,7 @@ model <- feols(salary ~ yrs.since.phd + yrs.service + sex, data = Salaries)
 
 ---
 
-# Multivariate OLS in R
+# Multivariable OLS in R
 
 What else might we want to know?
 
@@ -571,4 +569,4 @@ cor(predicted_values,Salaries$salary)^2
 
 # Swirl
 
-Let's do the Multivariate Regression Swirl!
+Let's do the Multivariable Regression Swirl!
