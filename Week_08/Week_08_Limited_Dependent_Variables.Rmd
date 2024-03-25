@@ -416,7 +416,7 @@ MEM is easier to calculate (and often easier to interpret), but the AME is gener
 
 There are a few standard ways in R to estimate marginal effects, none are perfect.
 
-We can calculate the individual marginal effects using `marginaleffects()` and the MER and AME easily using `summary(marginaleffects())` in the **marginaleffects** package. 
+We can calculate the individual marginal effects using `slopes()` and the MER and AME easily using `avg_slopes` in the **marginaleffects** package. 
 
 ```{r, echo = TRUE}
 library(marginaleffects)
@@ -425,7 +425,7 @@ data(gss_cat, package = 'forcats')
 gss_cat <- gss_cat %>% mutate(race = factor(race)) %>% na.omit()
 marriedlogit <- feglm(I(marital == 'Married') ~ age*tvhours + race, data = gss_cat)
 # AME below
-summary(slopes(marriedlogit))
+avg_slopes(marriedlogit)
 ```
 
 ---
@@ -437,7 +437,7 @@ You can get MER or MEMs using the `datagrid()` function. `datagrid()` by itself 
 ```{r, echo = TRUE}
 # MEM would be: summary(marginaleffects(marriedlogit, datagrid()))
 # Get the effect at a tvhours value of 2 and an age of 50
-summary(slopes(marriedlogit, datagrid(age  =50, tvhours = 2, grid.type = 'counterfactual')))
+avg_slopes(marriedlogit, datagrid(age  =50, tvhours = 2, grid.type = 'counterfactual'))
 ```
 
 
