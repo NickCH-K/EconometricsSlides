@@ -413,11 +413,26 @@ Where the $_i$ refers to a particular observation. $\sum_i$ means "sum this up o
 
 # Let's Play
 
-- Take a look at this OLS simulator and play around with it: [https://econometricsbysimulation.shinyapps.io/OLS-App/](https://econometricsbysimulation.shinyapps.io/OLS-App/)
-- Click "Show Residuals" to turn that on
-- Try different data generating processes and standard deviations
+Here's some code that runs a regression and shows some outputs
+
+```{r, echo = TRUE, eval = FALSE}
+d <- tibble(error = rnorm(100, 0, 1),
+            X = rnorm(100, 0, 1)) %>%
+  mutate(Y = 2 + 3*X + error)
+m <- feols(Y ~ X, data = d)
+m
+d <- d %>% mutate(resids = resid(m), preds = predict(m))
+ggplot(d, aes(x = X, y = resids)) + geom_point()
+ggplot(d, aes(x = X, y = Y)) + geom_point() + geom_smooth(method = 'lm', se = FALSE)
+```
+
+---
+
+# Let's Play
+
+- Let's try different data generating processes and standard deviations
 - What settings make the residuals small or large? Any guesses why?
-- What happens if you take the intercept out? What does that make our line do?
+- What happens if we add squared terms to the data generating process?
 - How close does the line come to the data generating process? Intercept and slope are in the second table below the graph under "Estimate"
 
 --- 
