@@ -58,16 +58,6 @@ pre[class] {
 }
 ```
 
-# Check-in
-
-- Where are we at?
-- Next week we have a midterm. The format will be very similar to the homeworks - multiple choice, some short answers, a little programming
-- It will cover everything up through the day of the midterm
-- This lecture will cover the last "new" material before the midterm
-- This is a pretty packed lecture, but it's structured to be easy to come back to and review, there will be plenty of practice next time, and this might end up broken across both days
-- The latter half of this week will just be practice, especially for this material but also for stuff we've done
-
----
 
 # The Right Hand Side
 

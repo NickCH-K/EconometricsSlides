@@ -83,7 +83,8 @@ theme_metro_regtitle <- function(x) {
 - Also these slides
 - Programming in R: free, you will want to have access to it. We will get to this next time
 - Assignments: Weekly homework combining econometrics and R tasks
-- There is a midterm and a final
+- Homework is graded on **timely completion** alone. Suggested revision, followed by **weekly quizzes** on that same material the following week. Lowest two quizzes dropped, including absences outside extraordinary circumstances
+- There is a cumulative final
 - A data exploration project
 - A group data analysis project
 - And completion of Swirl modules and online discussion
@@ -189,7 +190,7 @@ theme_metro_regtitle <- function(x) {
 ggplot(tibble(x = c(1:100,1:100), y = c(100:1, 1:100), linet = c(rep('Theoretical D',100),rep('Theoretical S',100))),
        aes(x=x, y=y, group = linet))+
   geom_line(size = 1.5, color = 'black') + 
-  geom_dl(aes(label = linet, x = x + 2), method = 'last.bumpup', size = 16/.pt) + 
+  geom_dl(aes(label = linet, x = x + 2), method = 'maxvar.points', size = 16/.pt) + 
   scale_x_continuous(limits = c(1, 120)) +
   geom_point(data = tibble(x = 50.5, y = 50, linet = 'x'), color = 'red', size = 8) + 
   annotate(geom = 'text', x = 53, y = 50, color = 'red', label = 'Observation', hjust = 0, size = 16/.pt) + 
@@ -293,20 +294,27 @@ knitr::include_graphics('Lecture_1_MinWage.jpg')
 
 ---
 
-# Eight Possible Relationships
+# Possible Relationships
 
-```{r, out.height = '550px'}
-knitr::include_graphics('Lecture_1_Relationships.png')
-```
+If X and Y are correlated...
+
+1. $X \rightarrow Y$ (X causes Y)?
+2. $Y \rightarrow X$ (Y causes X)?
+3. $X \leftarrow Z \rightarrow Y$ (Z causes both X and Y)?
+4. $X \rightarrow Z \rightarrow Y$ (X causes Z which causes Y)?
+5. $Y \rightarrow Z \rightarrow X$ (Y causes Z which causes X)?
+6. $X \leftarrow Z \leftarrow Y$ (Y causes Z which causes X)?
+7. $X \rightarrow Y$ and $X \leftarrow Z \rightarrow Y$
+8. Some other combination of two above?
+
 
 ---
 
 # Causality
 
-- The only ones we can eliminate are d, g, and h
-- All the rest are possible!
-- If f is correct, we see the negative relationship even though minimum wage has *nothing to do* with causing employment (like the ice cream and shorts example)
-- If a is correct, then even though we know minimum wage causes employment to change, the *size* or even *direction* of the relationship will be wrong (why?)
+- All of those are possible, and indistinguishable in the data (especially if we can't measure Z)
+- If 3 or 6 are correct, we see the negative relationship even though minimum wage has *nothing to do* with causing employment (like the ice cream and shorts example)
+- If 7 is correct, then even though we know minimum wage causes employment to change, the *size* or even *direction* of the relationship will be wrong (why?)
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Ordinary Least Squares"
-subtitle: "Part 1: What it Is"
+subtitle: "Part 1: What it is"
 date: "Updated `r Sys.Date()`"
 output:
   xaringan::moon_reader:

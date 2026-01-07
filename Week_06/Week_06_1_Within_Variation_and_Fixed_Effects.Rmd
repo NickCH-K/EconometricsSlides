@@ -373,10 +373,7 @@ ggdag_classic(dag,node_size=10) +
 - For each of these variables, would we expect them to have within variation, between variation, or both?
 - (Individual = person) How a child's height changes as they age.
 - (Individual = person) In a data set tracking many people over many years, the variation in the number of children a person has over their lifetime.
-- (Individual = city) Overall, Paris, France has more restaurants than Paris, Texas.
-- (Individual = genre) The average pop music album sells more copies than the average jazz album
-- (Individual = genre) Miles Davis' *Kind of Blue* sold very well *for a jazz album*.
-- (Individual = genre) Michael Jackson's *Thriller*, a pop album, sold many more copies than *Kind of Blue*, a jazz album.
+- (Individual = city) In any given year, Paris, France will have more restaurants than Paris, Texas.
 
 ---
 

@@ -483,10 +483,10 @@ ggplot(densdat2, aes(x=x, y = y)) +
 
 - This takes the form of
 
-$$ \hat{\beta}_1 \pm Z(s.e.) $$
+$$ \hat{\beta}_1 \pm Z\times s.e.(\hat{\beta}_1) $$
 
 - Where $Z$ is some value from our distribution that gives us the $1-\alpha$ percentile (for a 95% confidence interval with a normal sampling distribution, $Z = 1.96$)
-- and $s.e.$ is the standard error of $\hat{\beta}_1$
+- and $s.e.(\hat{\beta}_1)$ is the standard error of $\hat{\beta}_1$
 
 ---
 

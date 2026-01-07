@@ -242,7 +242,7 @@ animate(p,nframes=200)
 
 # A Continuous Control
 
-```{r, out.width="800px"}
+```{r, out.width="750px"}
 knitr::include_graphics("linear_control.gif")
 ```
 

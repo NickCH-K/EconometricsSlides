@@ -63,7 +63,26 @@ pre[class] {
 - Then we can download and install RStudio at [RStudio.com](http://Rstudio.com)
 - Then, R is installed and ready to go! Open up RStudio to get going
 - Alternately, you can skip installing anything and use [RStudio.cloud](http://RStudio.cloud) which runs entirely in the browser but is a bit slower and requires a (free) account
-- **If you installed R and/or RStudio a while ago, please reinstall it. I'd like everyone to have 4.1 or newer and the newest version of RStudio.**
+- **If you installed R and/or RStudio a while ago, please reinstall it. I'd like everyone to have 4.5 or newer and the newest version of RStudio.**
+
+---
+
+# Learning to Code
+
+Do we really have to learn this? Can't AI write our code for us?
+
+- Yes
+- Code is only good if it is right. Data analysis code in particular will often "work" but be wrong
+- If you don't know how to code, you won't be able to tell if the AI code is right
+
+---
+
+# Learning to Code
+
+- Yes, you can use AI to help write your code
+- I have Copilot enabled in my RStudio and you can too!
+- Using AI to check your code and interpret error messages for you is great!
+- But it's all fruitless unless you know enough code that you *could* have done it yourself
 
 ---
 
@@ -185,20 +204,8 @@ log(exp(1))
 
 ---
 
-# Autocomplete
-
-- RStudio comes with autocomplete! 
-- Typing in the Source Pane or the Console, it will try to fill in things for you
-    - Command names (shows the syntax of the function too!)
-    - Object names from your environment
-    - Variable names in your data
-- Let's try redoing the code we just did, typing it out
-
----
-
 # Help
 
-- Autocomplete is one way that RStudio tries to help you out
 - The way that R helps you out is with the documentation
 - When you start doing anything serious with a computer, like programming, the most important skills are:
      - Knowing to read documentation

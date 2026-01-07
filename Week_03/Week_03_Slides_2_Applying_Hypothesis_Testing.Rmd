@@ -337,7 +337,7 @@ ggplot(dfd2, aes(x = x, y = y)) +
 - Rather than switching to a normal null for big samples, it will keep using t, but with large samples that's basically normal anyway
 - `feols()` and show us the t-statistic, standard error, and p-value compared to 0 (and can adjust for heteroskedasticity and clustering if you want!).
 - `etable()` will default to standard error, but `etable(coefstat = 'confint')` can give you confidence intervals
-- Both will report "stars" - if the p-value is below a certain $alpha$, you get stars! Be careful - the defaults are different in `feols()` (`r '*'`) = .05) than is standard in economics papers (`r '**'` = .05)
+- Both will report "stars" - if the p-value is below a certain $alpha$, you get stars! Be careful - the defaults are different in `feols()` (one star means $p \leq .05$) than is standard in economics papers (two stars means $p \leq .05$)
 
 ---
 
